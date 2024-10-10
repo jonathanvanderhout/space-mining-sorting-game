@@ -6,7 +6,7 @@
     <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-    <title>Space Mining Sorting Game</title>
+    <title>Space Mining Sorting Game with Rapier.js</title>
 
     <style>
         body,
@@ -159,7 +159,6 @@
             margin-top: 10px;
         }
 
-
         .speed-button {
             display: block;
             margin: 10px 0;
@@ -196,8 +195,8 @@
             transform: translateX(-50%);
             padding: 12px 24px;
             /* background-color: #FF4500;
-            color: white;
-            border: none; */
+                color: white;
+                border: none; */
             background: transparent;
             color: #FFD700;
             border: 2px solid #FFD700;
@@ -324,7 +323,7 @@
         </div>
         <!-- The Play Again button will be appended here -->
     </div>
-    <button id="random-delivery" class="speed-button">Resources Delivery (cost 5 for 20) </button>
+    <button id="random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
 
     <!-- Instructions Screen -->
     <div id="instruction-screen">
@@ -344,706 +343,764 @@
         <button id="begin-button">Begin</button>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.17.1/matter.min.js"></script>
-    <script>
-        document.addEventListener('touchmove', function (event) {
-            event.preventDefault();
-        }, { passive: false });
+    <!-- Include Rapier.js via CDN -->
+    <script type="module">
+        import * as RAPIER from 'https://cdn.skypack.dev/@dimforge/rapier2d-compat';
 
-        // Prevent pinch zoom
-        document.addEventListener('gesturestart', function (event) {
-            event.preventDefault();
-        });
+        (async () => {
+            // Initialize Rapier physics engine
+            await RAPIER.init();
 
-        // Prevent zoom on double-tap
-        var lastTouchEnd = 0;
-        document.addEventListener('touchend', function (event) {
-            var now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
+            // Set up the canvas
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
 
-        // Prevent zoom on mouse wheel
-        document.addEventListener('wheel', function (event) {
-            if (event.ctrlKey) {
-                event.preventDefault();
-            }
-        }, { passive: false });
+            // Create a Rapier world with no gravity
+            const gravity = { x: 0, y: 0 };
+            const world = new RAPIER.World(gravity);
 
-        const { Engine, Render, World, Bodies, Body, Events } = Matter;
+            // Time step
+            const timeStep = 1 / 60;
 
-        let width = window.innerWidth;
-        let height = window.innerHeight;
+            // Variables for game state
+            const automatedShips = [];
+            const circles = [];
+            let money = 0;
+            let totalMoneySpent = 0;
+            let shipsPurchased = 1; // Start with one ship
+            const maxShips = 10;
+            let speedIncreases = 0;
+            const maxSpeedIncreases = 5;
+            let automatedShipSpeed = 100;
+            let shipTargets = [];
+            let gravityCollectorPurchased = false;
+            let gravityCollectorStrength = 1;
+            let gravityCollectorActive = false;
+            let gameWon = false;
+            let funnyMessageTimeout = null;
+            let startTime = null;
+            const ghostRings = [];
+            const ghostCircles = [];
+            const redRings = [];
 
-        const engine = Engine.create();
-        engine.world.gravity.y = 0;
-        const world = engine.world;
+            // Create boundaries (static rigid bodies)
+            const boundaries = [
+                { x: width / 2, y: 0, w: width, h: 10 },                 // Top
+                { x: width / 2, y: height, w: width, h: 10 },            // Bottom
+                { x: 0, y: height / 2, w: 10, h: height },               // Left
+                { x: width, y: height / 2, w: 10, h: height },           // Right
+            ];
 
-        const render = Render.create({
-            element: document.body,
-            canvas: document.getElementById('gameCanvas'),
-            engine: engine,
-            options: {
-                width: width,
-                height: height,
-                wireframes: false,
-                background: '#000033'
-            }
-        });
-
-        Render.run(render);
-        Engine.run(engine);
-
-        // Create boundaries and add them to the world
-        const boundaryThickness = 10;
-        const boundaries = [
-            Bodies.rectangle(width / 2, -boundaryThickness / 2, width, boundaryThickness, { isStatic: true }),
-            Bodies.rectangle(width / 2, height + boundaryThickness / 2, width, boundaryThickness, { isStatic: true }),
-            Bodies.rectangle(-boundaryThickness / 2, height / 2, boundaryThickness, height, { isStatic: true }),
-            Bodies.rectangle(width + boundaryThickness / 2, height / 2, boundaryThickness, height, { isStatic: true }),
-        ];
-        World.add(world, boundaries);
-
-        // Ship creation
-        const shipVertices = [
-            { x: 0, y: 0 },
-            { x: 20, y: -10 },
-            { x: 40, y: 0 },
-            { x: 20, y: 10 }
-        ];
-
-        function createShip(x, y, color) {
-            return Bodies.fromVertices(x, y, [shipVertices], {
-                isStatic: false,
-                render: {
-                    fillStyle: color,
-                    strokeStyle: '#FFFFFF',
-                    lineWidth: 2
-                }
-            });
-        }
-
-        const automatedShips = [];
-        let shipTargets = [];
-        let automatedShipSpeed = 1;
-
-        const ship1 = createShip(width / 2, height / 2, '#FF4500');
-        automatedShips.push(ship1);
-        shipTargets.push(null);
-
-        // Ship purchase limit
-        let shipsPurchased = 1; // Start with one ship
-        const maxShips = 10;
-
-        // Speed increase limit
-        let speedIncreases = 0;
-        const maxSpeedIncreases = 5;
-
-        // Player-controlled ship
-        function generateHexagon(radius) {
-            const vertices = [];
-            for (let i = 0; i < 6; i++) {
-                const angle = (Math.PI / 3) * i;
-                vertices.push({
-                    x: radius * Math.cos(angle),
-                    y: radius * Math.sin(angle)
-                });
-            }
-            return vertices;
-        }
-
-        const ship3 = Bodies.fromVertices(width / 2 - 100, height / 2 - 100, [generateHexagon(23)], {
-            isStatic: false,
-            render: {
-                fillStyle: '#32CD32',
-                strokeStyle: '#228B22',
-                lineWidth: 2
-            }
-        });
-
-World.add(world, automatedShips.concat([ship3]));
-
-        const materials = [
-            { name: 'water', color: '#00FFFF' },
-            { name: 'iron', color: '#A9A9A9' },
-            { name: 'gold', color: '#FFD700' },
-            { name: 'uranium', color: '#00FF00' }
-        ];
-
-        const circles = [];
-        const circleRadius = 10;
-        function generateCircles(count) {
-            for (let i = 0; i < count; i++) {
-                const material = materials[Math.floor(Math.random() * materials.length)];
-
-                // Calculate a random offset to place circles near ship3 but not overlapping
-                let offsetDistance = circleRadius * 8; // Minimum distance to avoid overlap
-                let angle = Math.random() * Math.PI * 2; // Random angle
-                let offsetX = Math.cos(angle) * offsetDistance;
-                let offsetY = Math.sin(angle) * offsetDistance;
-
-                let circleX = ship3.position.x + offsetX;
-                let circleY = ship3.position.y + offsetY;
-
-                // Ensure the circle is within the boundaries
-                const margin = circleRadius + 20; // Margin from boundaries
-                circleX = Math.min(Math.max(circleX, margin), width - margin);
-                circleY = Math.min(Math.max(circleY, margin), height - margin);
-
-                const circle = Bodies.circle(circleX, circleY, circleRadius, {
-                    render: {
-                        fillStyle: material.color,
-                        strokeStyle: '#FFFFFF',
-                        lineWidth: 2
-                    },
-                    collisionFilter: {
-                        // Prevent the new circle from colliding with ship3
-                        // mask: 0xFFFFFFFF ^ ship3.collisionFilter.category
-                    }
-                });
-
-                circle.isTargeted = false; // Initialize isTargeted flag
-                World.add(world, circle);
-                circles.push(circle);
-
-                // Create a ghost circle ring for the visual effect
-                setTimeout(() => {
-                    createGhostRing(circle.position.x, circle.position.y);
-                }, 50);
-            }
-        }
-
-        function createGhostRing(x, y) {
-            const initialRadius = 10; // Start small and grow
-            const ghostRing = Bodies.circle(x, y, initialRadius, {
-                isStatic: true,  // Ghost circle should not interact with physics
-                render: {
-                    fillStyle: 'transparent',  // No fill, just a ring
-                    strokeStyle: '#FFFF00',    // Yellow ring
-                    lineWidth: 5,              // Thickness of the ring
-                    opacity: 1
-                },
-                collisionFilter: {
-                    group: -1,  // Ensure it does not collide with anything
-                    category: 0x0001,
-                    mask: 0x0000  // No collisions with other objects
-                }
+            boundaries.forEach(boundary => {
+                const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
+                const body = world.createRigidBody(bodyDesc);
+                const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
+                world.createCollider(colliderDesc, body);
             });
 
-            World.add(world, ghostRing);
+            // Define materials
+            const materials = [
+                { name: 'water', color: '#00FFFF' },
+                { name: 'iron', color: '#A9A9A9' },
+                { name: 'gold', color: '#FFD700' },
+                { name: 'uranium', color: '#00FF00' }
+            ];
 
-            // Animate growing and fading out
-            let growInterval = setInterval(() => {
-                ghostRing.circleRadius *= 1.1;  // Increase the size of the ring
-                ghostRing.render.opacity *= 0.9; // Fade out the opacity
+            // Target positions for sorting
+            const targetPositions = {
+                'water': { x: width / 4, y: height / 4 },
+                'iron': { x: (3 * width) / 4, y: height / 4 },
+                'gold': { x: width / 4, y: (3 * height) / 4 },
+                'uranium': { x: (3 * width) / 4, y: (3 * height) / 4 },
+            };
 
-                if (ghostRing.render.opacity < 0.1) {
-                    World.remove(world, ghostRing); // Remove the ghost ring once it's nearly invisible
-                    clearInterval(growInterval);   // Stop the interval once it's removed
-                }
-            }, 50); // Adjust speed of growing and fading
-        }
+            // Ship creation
+            const shipVertices = [
+                { x: 0, y: 0 },
+                { x: 20, y: -10 },
+                { x: 40, y: 0 },
+                { x: 20, y: 10 }
+            ];
 
-        generateCircles(25);
+            // Function to create a ship (diamond-shaped)
+            function createShip(x, y, color) {
+                const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                    .setTranslation(x, y)
+                    .setLinearDamping(5)
+                    .setAngularDamping(5);
 
-        const targetPositions = {
-            'water': { x: width / 4, y: height / 4 },
-            'iron': { x: (3 * width) / 4, y: height / 4 },
-            'gold': { x: width / 4, y: (3 * height) / 4 },
-            'uranium': { x: (3 * width) / 4, y: (3 * height) / 4 },
-        };
+                const body = world.createRigidBody(bodyDesc);
 
-        let money = 0;
-        let totalMoneySpent = 0;
+                // Convert shipVertices to a flat array
+                const points = [];
+                shipVertices.forEach(vertex => {
+                    points.push(vertex.x - 20); // Center the shape
+                    points.push(vertex.y);
+                });
 
-        function updateMoney() {
-            let elapsedTime = '';
-            if (startTime) {
-                elapsedTime = formatElapsedTime(startTime);
-            } else {
-                elapsedTime = '00:00';
-            }
+                const colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+                colliderDesc.setRestitution(0.5);
+                world.createCollider(colliderDesc, body);
 
-            document.getElementById('money-stats').innerHTML = `Sorted Resources: ${money}
-    <br>Total Resources Spent: ${totalMoneySpent}
-    <br>Total Unsorted: ${circles.length - money}
-    <br>Time Elapsed: ${elapsedTime}`;
-            updateButtons();
-        }
-
-        function updateButtons() {
-            const increaseSpeedButton = document.getElementById('increase-speed');
-            const buyShipButton = document.getElementById('buy-ship');
-            const buyGravityCollectorButton = document.getElementById('buy-gravity-collector');
-            const randomDeliveryButton = document.getElementById('random-delivery');
-
-            increaseSpeedButton.disabled = money < 5 || speedIncreases >= maxSpeedIncreases;
-            buyShipButton.disabled = money < 15 || shipsPurchased >= maxShips;
-            buyGravityCollectorButton.disabled = money < 50;
-            randomDeliveryButton.disabled = money < 5 || circles.length >= 300;
-
-            // Update button text with counts
-            increaseSpeedButton.innerHTML = `Speed Increase (cost: 5) ${speedIncreases}/${maxSpeedIncreases}`;
-            buyShipButton.innerHTML = `Buy New Ship (cost: 15) ${shipsPurchased}/${maxShips}`;
-        }
-
-        document.getElementById('buy-gravity-collector').addEventListener('click', () => {
-            const cost = 50;
-            if (money >= cost) {
-                money -= cost;
-                totalMoneySpent += cost;
-                updateMoney();
-                activateGravityCollector();
-            }
-        });
-
-        document.getElementById('increase-speed').addEventListener('click', () => {
-            if (money >= 5 && speedIncreases < maxSpeedIncreases) {
-                money -= 5;
-                totalMoneySpent += 5;
-                automatedShipSpeed += 0.25;
-                speedIncreases += 1;
-                removeSortedCircles(5);
-                updateMoney();
-
-                if (speedIncreases >= maxSpeedIncreases) {
-                    document.getElementById('increase-speed').disabled = true;
-                }
-            }
-        });
-
-        function getRandomColor() {
-            const colors = ['#FF4500', '#4169E1', '#FFD700', '#00FF00', '#FF69B4'];
-            return colors[Math.floor(Math.random() * colors.length)];
-        }
-
-        document.getElementById('buy-ship').addEventListener('click', () => {
-            const cost = 15;
-            if (money >= cost && shipsPurchased < maxShips) {
-                money -= cost;
-                totalMoneySpent += cost;
-                removeSortedCircles(15);
-                const newShip = createShip(width / 2, height / 2, getRandomColor());
-                automatedShips.push(newShip);
+                body.userData = { color };
+                automatedShips.push(body);
                 shipTargets.push(null);
-                World.add(world, newShip);
-                shipsPurchased += 1;
-                updateMoney();
-
-                if (shipsPurchased >= maxShips) {
-                    document.getElementById('buy-ship').disabled = true;
-                }
-            }
-        });
-
-        document.getElementById('random-delivery').addEventListener('click', () => {
-            if (money >= 5 && circles.length < 300) {
-                removeSortedCircles(5);
-                money -= 5;
-                totalMoneySpent += 5;
-                generateCircles(20);
-                updateMoney();
-            }
-        });
-
-        function moveShipTowards(ship, targetX, targetY, speed) {
-            const angle = Math.atan2(targetY - ship.position.y, targetX - ship.position.x);
-
-            const velocityX = Math.cos(angle) * speed;
-            const velocityY = Math.sin(angle) * speed;
-
-            Body.setVelocity(ship, { x: velocityX, y: velocityY });
-            Body.setAngle(ship, angle);
-        }
-
-        function pushCircleTowards(circle, targetX, targetY) {
-            const angle = Math.atan2(targetY - circle.position.y, targetX - circle.position.x);
-            const pushSpeed = 2;
-
-            const velocityX = Math.cos(angle) * pushSpeed;
-            const velocityY = Math.sin(angle) * pushSpeed;
-
-            Body.setVelocity(circle, { x: velocityX, y: velocityY });
-        }
-
-        function isCircleInCorrectArea(circle, tolerance_starting = 200) {
-            const { x, y } = circle.position;
-            const material = materials.find(m => m.color === circle.render.fillStyle);
-            const target = targetPositions[material.name];
-
-            const tolerance = tolerance_starting;
-            const distance = Math.hypot(x - target.x, y - target.y);
-
-            if (distance <= tolerance) {
-                circle.isTargeted = false;
-                return true;
+                return body;
             }
 
-            return false;
-        }
+            // Function to create player-controlled hexagon ship
+            function createHexagonShip(x, y, color) {
+                const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                    .setTranslation(x, y)
+                    .setLinearDamping(5)
+                    .setAngularDamping(5);
+                const body = world.createRigidBody(bodyDesc);
 
-        function updateAutomation() {
-            if (circles.length < 10) {
-                generateCircles(1)
-            }
-
-            for (let i = 0; i < automatedShips.length; i++) {
-                const ship = automatedShips[i];
-                let currentTarget = shipTargets[i];
-
-                if (currentTarget && isCircleInCorrectArea(currentTarget)) {
-                    currentTarget.isTargeted = false;
-                    shipTargets[i] = null;
-                    currentTarget = null;
+                // Construct a flat array of numbers for the convex hull points
+                const points = [];
+                const radius = 23;
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    points.push(radius * Math.cos(angle));
+                    points.push(radius * Math.sin(angle));
                 }
 
-                if (!currentTarget || currentTarget.isTargeted === false) {
-                    let nearestCircle = null;
-                    let shortestDistance = Infinity;
+                const colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+                colliderDesc.setRestitution(0.5);
+                world.createCollider(colliderDesc, body);
+                body.userData = { color };
+                return body;
+            }
 
-                    for (let j = 0; j < circles.length; j++) {
-                        const circle = circles[j];
-                        if (!circle.isTargeted && !isCircleInCorrectArea(circle)) {
-                            const distance = Math.hypot(circle.position.x - ship.position.x, circle.position.y - ship.position.y);
+            // Create initial automated ship
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
+            createShip(width / 2, height / 2, '#FF4500');
 
-                            if (distance < shortestDistance) {
-                                shortestDistance = distance;
-                                nearestCircle = circle;
+            // Create player ship
+            const playerShip = createHexagonShip(width / 2 - 100, height / 2 - 100, '#32CD32');
+
+            // Function to generate circles (materials)
+            function generateCircles(count) {
+                for (let i = 0; i < count; i++) {
+                    const material = materials[Math.floor(Math.random() * materials.length)];
+
+                    // Random placement around the player ship
+                    let offsetDistance = 80;
+                    let angle = Math.random() * Math.PI * 2;
+                    let offsetX = Math.cos(angle) * offsetDistance;
+                    let offsetY = Math.sin(angle) * offsetDistance;
+
+                    let circleX = playerShip.translation().x + offsetX;
+                    let circleY = playerShip.translation().y + offsetY;
+
+                    const margin = 30;
+                    circleX = Math.min(Math.max(circleX, margin), width - margin);
+                    circleY = Math.min(Math.max(circleY, margin), height - margin);
+
+                    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                        .setTranslation(circleX, circleY)
+                        .setLinearDamping(1); // Increase this value to make circles slow down faster
+                    const body = world.createRigidBody(bodyDesc);
+                    const colliderDesc = RAPIER.ColliderDesc.ball(10);
+                    colliderDesc.setRestitution(0.7);
+                    const collider = world.createCollider(colliderDesc, body);
+                    body.userData = {
+                        color: material.color,
+                        material: material.name,
+                        isTargeted: false,
+                        collider: collider,
+                        radius: 10,
+                        removed: false
+                    };
+                    circles.push(body);
+
+                    // Create a ghost ring for visual effect
+                    setTimeout(() => {
+                        createGhostRing(circleX, circleY);
+                    }, 50);
+                }
+            }
+
+            function createGhostRing(x, y) {
+                const ghostRing = {
+                    x: x,
+                    y: y,
+                    radius: 10,
+                    opacity: 1
+                };
+                ghostRings.push(ghostRing);
+            }
+
+            generateCircles(1000);
+
+            // Function to move automated ships
+            function moveShipTowards(ship, targetX, targetY, speed) {
+                const position = ship.translation();
+                const angle = Math.atan2(targetY - position.y, targetX - position.x);
+
+                const velocityX = Math.cos(angle) * speed;
+                const velocityY = Math.sin(angle) * speed;
+
+                ship.setLinvel({ x: velocityX, y: velocityY }, true);
+                ship.setRotation(angle);
+            }
+
+            // Function to manipulate circle's velocity towards target
+            function pushCircleTowards(circle, targetX, targetY) {
+                const position = circle.translation();
+                const angle = Math.atan2(targetY - position.y, targetX - position.x);
+                const pushSpeed = 200;
+
+                const velocityX = Math.cos(angle) * pushSpeed;
+                const velocityY = Math.sin(angle) * pushSpeed;
+
+                circle.setLinvel({ x: velocityX, y: velocityY }, true);
+            }
+
+            // Function to check if a circle is in the correct area
+            function isCircleInCorrectArea(circle, tolerance_starting = 200) {
+                if (circle.userData.removed) {
+                    return false;
+                }
+
+                const position = circle.translation();
+                const material = circle.userData.material;
+                const target = targetPositions[material];
+
+                const tolerance = tolerance_starting;
+                const distance = Math.hypot(position.x - target.x, position.y - target.y);
+
+                if (distance <= tolerance) {
+                    circle.userData.isTargeted = false;
+                    return true;
+                }
+
+                return false;
+            }
+
+            // Update automation logic for ships to push circles
+            function updateAutomation() {
+                if (circles.length < 10) {
+                    generateCircles(1);
+                }
+
+                for (let i = 0; i < automatedShips.length; i++) {
+                    const ship = automatedShips[i];
+                    let currentTarget = shipTargets[i];
+
+                    if (currentTarget && currentTarget.userData.removed) {
+                        shipTargets[i] = null;
+                        currentTarget = null;
+                    }
+
+                    if (currentTarget && isCircleInCorrectArea(currentTarget)) {
+                        currentTarget.userData.isTargeted = false;
+                        shipTargets[i] = null;
+                        currentTarget = null;
+                    }
+
+                    if (!currentTarget || currentTarget.userData.isTargeted === false) {
+                        let nearestCircle = null;
+                        let shortestDistance = Infinity;
+
+                        for (let j = 0; j < circles.length; j++) {
+                            const circle = circles[j];
+                            if (!circle.userData.isTargeted && !isCircleInCorrectArea(circle) && !circle.userData.removed) {
+                                const circlePos = circle.translation();
+                                const shipPos = ship.translation();
+                                const distance = Math.hypot(circlePos.x - shipPos.x, circlePos.y - shipPos.y);
+
+                                if (distance < shortestDistance) {
+                                    shortestDistance = distance;
+                                    nearestCircle = circle;
+                                }
+                            }
+                        }
+
+                        if (nearestCircle) {
+                            shipTargets[i] = nearestCircle;
+                            nearestCircle.userData.isTargeted = true;
+                        }
+                    }
+
+                    if (shipTargets[i] && !shipTargets[i].userData.removed) {
+                        const circle = shipTargets[i];
+                        const circlePos = circle.translation();
+                        const material = circle.userData.material;
+                        const target = targetPositions[material];
+
+                        const distanceToTarget = Math.hypot(circlePos.x - target.x, circlePos.y - target.y);
+
+                        if (distanceToTarget < 50) {
+                            // Do nothing
+                        } else {
+                            const distanceToCircle = Math.hypot(circlePos.x - ship.translation().x, circlePos.y - ship.translation().y);
+
+                            if (distanceToCircle < 30) {
+                                pushCircleTowards(circle, target.x, target.y);
+                            } else {
+                                moveShipTowards(ship, circlePos.x, circlePos.y, automatedShipSpeed);
                             }
                         }
                     }
-
-                    if (nearestCircle) {
-                        shipTargets[i] = nearestCircle;
-                        nearestCircle.isTargeted = true;
-                    }
                 }
+            }
 
-                if (shipTargets[i]) {
-                    const circle = shipTargets[i];
-                    const { x: circleX, y: circleY } = circle.position;
-                    const material = materials.find(m => m.color === circle.render.fillStyle);
-                    const target = targetPositions[material.name];
+            // Function to check the win condition
+            function checkWinCondition() {
+                let allCirclesCorrect = true;
+                money = 0;
 
-                    const distanceToTarget = Math.hypot(circleX - target.x, circleY - target.y);
-
-                    if (distanceToTarget < 50) {
-                        // Circle is near its target
+                for (let i = 0; i < circles.length; i++) {
+                    const circle = circles[i];
+                    if (isCircleInCorrectArea(circle)) {
+                        money++;
                     } else {
-                        const distanceToCircle = Math.hypot(circle.position.x - ship.position.x, circle.position.y - ship.position.y);
-
-                        if (distanceToCircle < 30) {
-                            pushCircleTowards(circle, target.x, target.y);
-                        } else {
-                            moveShipTowards(ship, circle.position.x, circle.position.y, automatedShipSpeed);
-                        }
+                        allCirclesCorrect = false;
                     }
                 }
-            }
-        }
 
-        let gameWon = false;
-        let funnyMessageTimeout = null;
-        let startTime = null;
+                updateMoney();
 
-        function formatElapsedTime(startTime) {
-            const now = new Date();
-            const elapsed = Math.floor((now - startTime) / 1000);
+                if (allCirclesCorrect && !gameWon && circles.length >= 300) {
+                    let message = document.getElementById('message')
+                    message.style.display = 'block';
 
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
+                    const now = new Date();
+                    const elapsedTimeFormatted = formatElapsedTime(startTime);
+                    const elapsedTimeInSeconds = Math.floor((now - startTime) / 1000);
+                    message.innerHTML = `Congratulations, you have fully sorted ${circles.length} resources in ${elapsedTimeFormatted}`
+                    gameWon = true;
 
-            const formattedMinutes = minutes.toString().padStart(2, '0');
-            const formattedSeconds = seconds.toString().padStart(2, '0');
-
-            return `${formattedMinutes}:${formattedSeconds}`;
-        }
-
-        function formatTimeFromSeconds(totalSeconds) {
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-
-            const formattedMinutes = minutes.toString().padStart(2, '0');
-            const formattedSeconds = seconds.toString().padStart(2, '0');
-
-            return `${formattedMinutes}:${formattedSeconds}`;
-        }
-
-        function checkWinCondition() {
-            let allCirclesCorrect = true;
-            money = 0;
-
-            for (let i = 0; i < circles.length; i++) {
-                const circle = circles[i];
-                if (isCircleInCorrectArea(circle)) {
-                    money++;
-                } else {
-                    allCirclesCorrect = false;
+                    storeBestTime(elapsedTimeInSeconds);
+                    showPlayAgainButton();
+                } else if (!allCirclesCorrect && gameWon) {
+                    gameWon = false;
+                    document.getElementById('message').style.display = 'none';
+                    showFunnyMessage();
                 }
             }
 
-            updateMoney();
+            // Update money and buttons
+            function updateMoney() {
+                let elapsedTime = '';
+                if (startTime) {
+                    elapsedTime = formatElapsedTime(startTime);
+                } else {
+                    elapsedTime = '00:00';
+                }
 
-            if (allCirclesCorrect && !gameWon && circles.length >= 300) {
-                let message = document.getElementById('message')
-                message.style.display = 'block';
+                document.getElementById('money-stats').innerHTML = `Sorted Resources: ${money}
+        <br>Total Resources Spent: ${totalMoneySpent}
+        <br>Total Unsorted: ${circles.length - money}
+        <br>Time Elapsed: ${elapsedTime}`;
+                updateButtons();
+            }
 
-                // Get the elapsed time in seconds
+            function updateButtons() {
+                const increaseSpeedButton = document.getElementById('increase-speed');
+                const buyShipButton = document.getElementById('buy-ship');
+                const buyGravityCollectorButton = document.getElementById('buy-gravity-collector');
+                const randomDeliveryButton = document.getElementById('random-delivery');
+
+                increaseSpeedButton.disabled = money < 5 || speedIncreases >= maxSpeedIncreases;
+                buyShipButton.disabled = money < 15 || shipsPurchased >= maxShips;
+                buyGravityCollectorButton.disabled = money < 50;
+                randomDeliveryButton.disabled = money < 5 || circles.length >= 300;
+
+                // Update button text with counts
+                increaseSpeedButton.innerHTML = `Speed Increase (cost: 5) ${speedIncreases}/${maxSpeedIncreases}`;
+                buyShipButton.innerHTML = `Buy New Ship (cost: 15) ${shipsPurchased}/${maxShips}`;
+            }
+
+            function formatElapsedTime(startTime) {
                 const now = new Date();
-                const elapsedTimeInSeconds = Math.floor((now - startTime) / 1000);
+                const elapsed = Math.floor((now - startTime) / 1000);
 
-                const elapsedTimeFormatted = formatElapsedTime(startTime);
-                message.innerHTML = `Congratulations, you have fully sorted ${circles.length} resources in ${elapsedTimeFormatted}`
-                gameWon = true;
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
 
-                // Store the time taken to win in localStorage
-                storeBestTime(elapsedTimeInSeconds);
-
-                // Show 'Play Again' button
-                showPlayAgainButton();
-
-            } else if (!allCirclesCorrect && gameWon) {
-                gameWon = false;
-                document.getElementById('message').style.display = 'none';
-                showFunnyMessage();
-            }
-        }
-
-        // Function to store the best time in localStorage
-        function storeBestTime(timeInSeconds) {
-            // Get the existing times from localStorage
-            let bestTimes = localStorage.getItem('bestTimes');
-
-            if (bestTimes) {
-                bestTimes = JSON.parse(bestTimes);
-            } else {
-                bestTimes = [];
+                return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
 
-            // Add the new time
-            bestTimes.push(timeInSeconds);
+            function formatTimeFromSeconds(totalSeconds) {
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
 
-            // Sort the times in ascending order
-            bestTimes.sort(function (a, b) {
-                return a - b;
+                const formattedMinutes = minutes.toString().padStart(2, '0');
+                const formattedSeconds = seconds.toString().padStart(2, '0');
+
+                return `${formattedMinutes}:${formattedSeconds}`;
+            }
+
+            function getRandomColor() {
+                const colors = ['#FF4500', '#4169E1', '#FFD700', '#00FF00', '#FF69B4'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            // Event listeners for buttons
+            document.getElementById('buy-gravity-collector').addEventListener('click', () => {
+                const cost = 50;
+                if (money >= cost) {
+                    money -= cost;
+                    totalMoneySpent += cost;
+                    updateMoney();
+                    activateGravityCollector();
+                }
             });
 
-            // Keep only the top 5 times
-            if (bestTimes.length > 5) {
-                bestTimes = bestTimes.slice(0, 5);
+            document.getElementById('increase-speed').addEventListener('click', () => {
+                if (money >= 5 && speedIncreases < maxSpeedIncreases) {
+                    money -= 5;
+                    totalMoneySpent += 5;
+                    automatedShipSpeed += 25;
+                    speedIncreases += 1;
+                    removeSortedCircles(5);
+                    updateMoney();
+
+                    if (speedIncreases >= maxSpeedIncreases) {
+                        document.getElementById('increase-speed').disabled = true;
+                    }
+                }
+            });
+
+            document.getElementById('buy-ship').addEventListener('click', () => {
+                const cost = 15;
+                if (money >= cost && shipsPurchased < maxShips) {
+                    money -= cost;
+                    totalMoneySpent += cost;
+                    removeSortedCircles(15);
+                    const newShip = createShip(width / 2, height / 2, getRandomColor());
+                    shipsPurchased += 1;
+                    updateMoney();
+
+                    if (shipsPurchased >= maxShips) {
+                        document.getElementById('buy-ship').disabled = true;
+                    }
+                }
+            });
+
+            document.getElementById('random-delivery').addEventListener('click', () => {
+                if (money >= 5 && circles.length < 300) {
+                    removeSortedCircles(5);
+                    money -= 5;
+                    totalMoneySpent += 5;
+                    generateCircles(20);
+                    updateMoney();
+                }
+            });
+
+            function removeSortedCircles(numToRemove) {
+                let removedCount = 0;
+                totalMoneySpent += numToRemove;
+
+                for (let i = circles.length - 1; i >= 0 && removedCount < numToRemove; i--) {
+                    const circle = circles[i];
+                    if (isCircleInCorrectArea(circle)) {
+                        const circlePosition = { x: circle.translation().x, y: circle.translation().y };
+                        const circleColor = circle.userData.color;
+                        const radius = circle.userData.radius;
+
+                        circle.userData.isTargeted = false;
+
+                        for (let j = 0; j < shipTargets.length; j++) {
+                            if (shipTargets[j] === circle) {
+                                shipTargets[j] = null;
+                            }
+                        }
+
+                        circle.userData.removed = true;
+
+                        world.removeRigidBody(circle);
+                        circles.splice(i, 1);
+                        removedCount++;
+
+                        // Create a "ghost" circle for the visual effect
+                        const ghostCircle = {
+                            x: circlePosition.x,
+                            y: circlePosition.y,
+                            radius: radius * 1.2,
+                            color: circleColor,
+                            opacity: 1
+                        };
+                        ghostCircles.push(ghostCircle);
+                    }
+                }
             }
 
-            // Store back to localStorage
-            localStorage.setItem('bestTimes', JSON.stringify(bestTimes));
-        }
+            function addRedRings() {
+                const ringRadius = 150;
+                for (let key in targetPositions) {
+                    const pos = targetPositions[key];
+                    redRings.push({ x: pos.x, y: pos.y, radius: ringRadius });
+                }
+            }
 
-        function showPlayAgainButton() {
-            const moneyDisplay = document.getElementById('money-display');
-            // Check if the button already exists to prevent duplicates
-            if (!document.getElementById('play-again-button')) {
-                const playAgainButton = document.createElement('button');
-                playAgainButton.id = 'play-again-button';
-                playAgainButton.innerHTML = 'Play Again';
-                playAgainButton.className = 'speed-button';
-                playAgainButton.style.marginTop = '10px';
-                playAgainButton.addEventListener('click', function () {
-                    location.reload();
+            // Function to activate gravity collector
+            function activateGravityCollector() {
+                removeSortedCircles(50);
+                if (gravityCollectorPurchased) {
+                    gravityCollectorStrength += 1;
+                    document.getElementById("buy-gravity-collector").innerHTML = `Upgrade Gravity Collector to level ${gravityCollectorStrength + 1} (cost 50)`;
+                    return;
+                }
+                gravityCollectorPurchased = true;
+                gravityCollectorActive = true;
+                document.getElementById("buy-gravity-collector").innerHTML = `Upgrade Gravity Collector to level ${gravityCollectorStrength + 1} (cost 50)`;
+                addRedRings();
+
+                // Start applying gravity collector forces
+                // Since Rapier.js doesn't have the same event system as Matter.js, we'll call gravityCollectorForce() in the game loop
+            }
+
+            // Function to apply gravity collector forces
+            function gravityCollectorForce() {
+                circles.forEach(circle => {
+                    circle.resetForces(true)
+                    if (!isCircleInCorrectArea(circle, 100) && !circle.userData.removed) {
+                        const material = circle.userData.material;
+                        const target = targetPositions[material];
+                        const circlePos = circle.translation();
+                        const angle = Math.atan2(target.y - circlePos.y, target.x - circlePos.x);
+                        const forceMagnitude = 10000.5 * gravityCollectorStrength;
+
+                        const forceX = Math.cos(angle) * forceMagnitude;
+                        const forceY = Math.sin(angle) * forceMagnitude;
+
+                        // Apply force to the circle
+                        circle.addForce({ x: forceX, y: forceY }, true);
+                    }
+                });
+            }
+
+            function storeBestTime(timeInSeconds) {
+                let bestTimes = localStorage.getItem('bestTimes');
+
+                if (bestTimes) {
+                    bestTimes = JSON.parse(bestTimes);
+                } else {
+                    bestTimes = [];
+                }
+
+                bestTimes.push(timeInSeconds);
+
+                bestTimes.sort(function (a, b) {
+                    return a - b;
                 });
 
-                moneyDisplay.appendChild(playAgainButton);
-            }
-        }
+                if (bestTimes.length > 5) {
+                    bestTimes = bestTimes.slice(0, 5);
+                }
 
-
-        // Function to display best times on the instruction screen
-        function displayBestTimes() {
-            let bestTimes = localStorage.getItem('bestTimes');
-
-            if (bestTimes) {
-                bestTimes = JSON.parse(bestTimes);
-            } else {
-                bestTimes = [];
+                localStorage.setItem('bestTimes', JSON.stringify(bestTimes));
             }
 
-            const bestTimesList = document.getElementById('best-times-list');
-            bestTimesList.innerHTML = ''; // Clear any existing list items
-
-            for (let i = 0; i < bestTimes.length; i++) {
-                const timeInSeconds = bestTimes[i];
-                const formattedTime = formatTimeFromSeconds(timeInSeconds);
-                const listItem = document.createElement('li');
-                listItem.innerText = `${i + 1}. ${formattedTime}`;
-                bestTimesList.appendChild(listItem);
-            }
-        }
-
-        function showFunnyMessage() {
-            const funnyMessage = document.getElementById('funny-message');
-            funnyMessage.style.opacity = '1';
-
-            if (funnyMessageTimeout) {
-                clearTimeout(funnyMessageTimeout);
-            }
-
-            funnyMessageTimeout = setTimeout(() => {
-                funnyMessage.style.opacity = '0';
-            }, 3000);
-        }
-
-        // Ship3 (controlled by WASD keys)
-        const wasdKeys = { w: false, s: false, a: false, d: false };
-
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyW') wasdKeys.w = true;
-            if (e.code === 'KeyS') wasdKeys.s = true;
-            if (e.code === 'KeyA') wasdKeys.a = true;
-            if (e.code === 'KeyD') wasdKeys.d = true;
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyW') wasdKeys.w = false;
-            if (e.code === 'KeyS') wasdKeys.s = false;
-            if (e.code === 'KeyA') wasdKeys.a = false;
-            if (e.code === 'KeyD') wasdKeys.d = false;
-        });
-
-        function controlShip3() {
-            const speed = 2;
-            let velocity = { x: 0, y: 0 };
-
-            if (wasdKeys.w) velocity.y -= speed;
-            if (wasdKeys.s) velocity.y += speed;
-            if (wasdKeys.a) velocity.x -= speed;
-            if (wasdKeys.d) velocity.x += speed;
-
-            Body.setVelocity(ship3, velocity);
-        }
-
-        let gravityCollectorPurchased = false;
-        let gravityCollectorStrength = 1;
-
-        function removeSortedCircles(numToRemove) {
-            let removedCount = 0;
-            totalMoneySpent += numToRemove;
-
-            for (let i = circles.length - 1; i >= 0 && removedCount < numToRemove; i--) {
-                if (isCircleInCorrectArea(circles[i])) {
-                    const circle = circles[i];
-                    circle.isTargeted = false;
-                    const circlePosition = { x: circle.position.x, y: circle.position.y };
-                    const circleColor = circle.render.fillStyle;
-
-                    World.remove(world, circle);
-                    circles.splice(i, 1);
-                    removedCount++;
-
-                    // Create a "ghost" circle for the visual effect
-                    const ghostCircle = Bodies.circle(circlePosition.x, circlePosition.y, circle.circleRadius * 1.2, {
-                        isStatic: true,
-                        collisionFilter: {
-                            group: -1,
-                            category: 0x0001,
-                            mask: 0x0000
-                        },
-                        render: {
-                            fillStyle: circleColor,
-                            opacity: 1
-                        }
+            function showPlayAgainButton() {
+                const moneyDisplay = document.getElementById('money-display');
+                if (!document.getElementById('play-again-button')) {
+                    const playAgainButton = document.createElement('button');
+                    playAgainButton.id = 'play-again-button';
+                    playAgainButton.innerHTML = 'Play Again';
+                    playAgainButton.className = 'speed-button';
+                    playAgainButton.style.marginTop = '10px';
+                    playAgainButton.addEventListener('click', function () {
+                        location.reload();
                     });
 
-                    World.add(world, ghostCircle);
-
-                    let fadeInterval = setInterval(() => {
-                        ghostCircle.circleRadius *= 0.9;
-                        ghostCircle.render.opacity *= 0.9;
-                        if (ghostCircle.circleRadius < 1 || ghostCircle.render.opacity < 0.1) {
-                            World.remove(world, ghostCircle);
-                            clearInterval(fadeInterval);
-                        }
-                    }, 200);
+                    moneyDisplay.appendChild(playAgainButton);
                 }
             }
-        }
 
-        function addRedRings() {
-            const ringOptions = {
-                isStatic: true,
-                render: {
-                    fillStyle: 'transparent',
-                    strokeStyle: 'rgba(255, 0, 0, 0.3)', // Faint red color with 30% opacity
-                    lineWidth: 5,
-                    opacity: 1
-                },
-                collisionFilter: {
-                    group: -1, // Ensure it does not collide with anything
-                    category: 0x0001,
-                    mask: 0x0000 // No collisions with other objects
+            function displayBestTimes() {
+                let bestTimes = localStorage.getItem('bestTimes');
+
+                if (bestTimes) {
+                    bestTimes = JSON.parse(bestTimes);
+                } else {
+                    bestTimes = [];
                 }
-            };
 
-            // Define the radius of the rings
-            const ringRadius = 150; // Adjust as needed for visual effect
+                const bestTimesList = document.getElementById('best-times-list');
+                bestTimesList.innerHTML = '';
 
-            // Create and add rings for each target position
-            for (let key in targetPositions) {
-                const pos = targetPositions[key];
-                const ring = Bodies.circle(pos.x, pos.y, ringRadius, ringOptions);
-                World.add(world, ring);
-            }
-        }
-
-        function activateGravityCollector() {
-            removeSortedCircles(50);
-            if (gravityCollectorPurchased) {
-                gravityCollectorStrength += 1;
-                document.getElementById("buy-gravity-collector").innerHTML = `Upgrade Gravity Collector to level ${gravityCollectorStrength + 1} (cost 50)`;
-                return;
-            }
-            gravityCollectorPurchased = true;
-            document.getElementById("buy-gravity-collector").innerHTML = `Upgrade Gravity Collector to level ${gravityCollectorStrength + 1} (cost 50)`;
-            addRedRings()
-            Events.on(engine, 'beforeUpdate', function () {
-                if (gravityCollectorPurchased) {
-                    circles.forEach(circle => {
-                        if (!isCircleInCorrectArea(circle, tolerance_starting = 100)) {
-                            const material = materials.find(m => m.color === circle.render.fillStyle);
-                            const target = targetPositions[material.name];
-                            const angle = Math.atan2(target.y - circle.position.y, target.x - circle.position.x);
-
-                            Body.applyForce(circle, circle.position, {
-                                x: 0.0000005 * gravityCollectorStrength * Math.cos(angle),
-                                y: 0.0000005 * gravityCollectorStrength * Math.sin(angle)
-                            });
-                        }
-                    });
+                for (let i = 0; i < bestTimes.length; i++) {
+                    const timeInSeconds = bestTimes[i];
+                    const formattedTime = formatTimeFromSeconds(timeInSeconds);
+                    const listItem = document.createElement('li');
+                    listItem.innerText = `${i + 1}. ${formattedTime}`;
+                    bestTimesList.appendChild(listItem);
                 }
+            }
+
+            function showFunnyMessage() {
+                const funnyMessage = document.getElementById('funny-message');
+                funnyMessage.style.opacity = '1';
+
+                if (funnyMessageTimeout) {
+                    clearTimeout(funnyMessageTimeout);
+                }
+
+                funnyMessageTimeout = setTimeout(() => {
+                    funnyMessage.style.opacity = '0';
+                }, 3000);
+            }
+
+            // Control player ship with WASD keys
+            const wasdKeys = { w: false, s: false, a: false, d: false };
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyW') wasdKeys.w = true;
+                if (e.code === 'KeyS') wasdKeys.s = true;
+                if (e.code === 'KeyA') wasdKeys.a = true;
+                if (e.code === 'KeyD') wasdKeys.d = true;
             });
-        }
 
-        // Start the game loop
-        let gameStarted = false;
+            document.addEventListener('keyup', (e) => {
+                if (e.code === 'KeyW') wasdKeys.w = false;
+                if (e.code === 'KeyS') wasdKeys.s = false;
+                if (e.code === 'KeyA') wasdKeys.a = false;
+                if (e.code === 'KeyD') wasdKeys.d = false;
+            });
 
-        (function run() {
-            window.requestAnimationFrame(run);
-            if (gameStarted) {
-                Engine.update(engine, 1000 / 60);
-                controlShip3();
-                updateAutomation();
-                checkWinCondition();
+            function controlPlayerShip() {
+                const speed = 200;
+                let vx = 0;
+                let vy = 0;
+
+                if (wasdKeys.w) vy -= speed;
+                if (wasdKeys.s) vy += speed;
+                if (wasdKeys.a) vx -= speed;
+                if (wasdKeys.d) vx += speed;
+
+                playerShip.setLinvel({ x: vx, y: vy }, true);
             }
+
+            // Main game loop
+            function gameLoop() {
+                if (gameStarted) {
+                    controlPlayerShip();
+                    updateAutomation();
+
+                    checkWinCondition();
+                    world.step();
+
+                    if (gravityCollectorActive) {
+                        gravityCollectorForce();
+                    }
+                }
+
+                ctx.clearRect(0, 0, width, height);
+
+                // Draw red rings
+                redRings.forEach(ring => {
+                    ctx.beginPath();
+                    ctx.arc(ring.x, ring.y, ring.radius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                });
+
+                // Update and draw ghost rings
+                for (let i = ghostRings.length - 1; i >= 0; i--) {
+                    const ghostRing = ghostRings[i];
+                    ghostRing.radius *= 1.1;
+                    ghostRing.opacity *= 0.9;
+                    if (ghostRing.opacity <= 0.1 || ghostRing.radius >= 100) {
+                        ghostRings.splice(i, 1);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(ghostRing.x, ghostRing.y, ghostRing.radius, 0, 2 * Math.PI);
+                        ctx.strokeStyle = `rgba(255, 255, 0, ${ghostRing.opacity})`;
+                        ctx.lineWidth = 5;
+                        ctx.stroke();
+                    }
+                }
+
+                // Update and draw ghost circles
+                for (let i = ghostCircles.length - 1; i >= 0; i--) {
+                    const ghostCircle = ghostCircles[i];
+                    ghostCircle.radius *= 0.9;
+                    ghostCircle.opacity *= 0.9;
+                    if (ghostCircle.opacity <= 0.1 || ghostCircle.radius <= 1) {
+                        ghostCircles.splice(i, 1);
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(ghostCircle.x, ghostCircle.y, ghostCircle.radius, 0, 2 * Math.PI);
+                        ctx.fillStyle = ghostCircle.color;
+                        ctx.globalAlpha = ghostCircle.opacity;
+                        ctx.fill();
+                        ctx.globalAlpha = 1;
+                    }
+                }
+
+                circles.forEach(body => {
+                    if (body.userData.removed) return;
+
+                    const position = body.translation();
+                    ctx.beginPath();
+                    ctx.arc(position.x, position.y, body.userData.radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = body.userData.color;
+                    ctx.fill();
+                });
+
+                automatedShips.forEach(body => {
+                    const position = body.translation();
+                    ctx.save();
+                    ctx.translate(position.x, position.y);
+                    ctx.rotate(body.rotation());
+                    ctx.beginPath();
+                    // Draw the diamond shape
+                    ctx.moveTo(-20, 0);
+                    ctx.lineTo(0, -10);
+                    ctx.lineTo(20, 0);
+                    ctx.lineTo(0, 10);
+                    ctx.closePath();
+                    ctx.fillStyle = body.userData.color;
+                    ctx.fill();
+                    ctx.restore();
+                });
+
+                const position = playerShip.translation();
+                ctx.save();
+                ctx.translate(position.x, position.y);
+                ctx.rotate(playerShip.rotation());
+                ctx.beginPath();
+                const radius = 23;
+                ctx.moveTo(radius, 0);
+                for (let i = 1; i <= 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    ctx.lineTo(radius * Math.cos(angle), radius * Math.sin(angle));
+                }
+                ctx.closePath();
+                ctx.fillStyle = playerShip.userData.color;
+                ctx.fill();
+                ctx.restore();
+
+                requestAnimationFrame(gameLoop);
+            }
+
+            // Display best times when the instruction screen is shown
+            displayBestTimes();
+
+            // Handle Begin button click
+            var gameStarted = false
+            document.getElementById('begin-button').addEventListener('click', () => {
+                document.getElementById('instruction-screen').style.display = 'none';
+                gameStarted = true;
+                startTime = new Date();
+                gameLoop();
+            });
+
         })();
-
-        // Display best times when the instruction screen is shown
-        displayBestTimes();
-
-        // Handle Begin button click
-        document.getElementById('begin-button').addEventListener('click', () => {
-            document.getElementById('instruction-screen').style.display = 'none';
-            gameStarted = true;
-            startTime = new Date();
-        });
     </script>
 </body>
 
