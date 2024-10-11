@@ -370,10 +370,10 @@
             const ctx = canvas.getContext('2d');
             let width = canvas.width = window.innerWidth;
             let height = canvas.height = window.innerHeight;
-            let gameWorldHeight =  768
-            let gameWorldWidth = 1366
-            canvas.style.width = '99%';
-            canvas.style.height = '99%';
+            let gameWorldHeight =  1080
+            let gameWorldWidth = 1920
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
 
             // Variables for panning
             let isPanning = false;
@@ -395,8 +395,8 @@
                     const y = e.clientY - rect.top;
 
                     // Calculate the movement
-                    const dx = (x - startPan.x) / scale;
-                    const dy = (y - startPan.y) / scale;
+                    const dx = (x - startPan.x) // scale;
+                    const dy = (y - startPan.y) // scale;
 
                     // Update the origin for panning
                     originX += dx;
@@ -626,18 +626,18 @@
 
             // Create boundaries (static rigid bodies)
             const boundaries = [
-                { x: width / 2, y: 0, w: width, h: 10 },                 // Top
-                { x: width / 2, y: height, w: width, h: 10 },            // Bottom
-                { x: 0, y: height / 2, w: 10, h: height },               // Left
-                { x: width, y: height / 2, w: 10, h: height },           // Right
+                { x: gameWorldWidth / 2, y: 0, w: gameWorldWidth, h: 10 },                 // Top
+                { x: gameWorldWidth / 2, y: gameWorldHeight, w: gameWorldWidth, h: 10 },            // Bottom
+                { x: 0, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },               // Left
+                { x: gameWorldWidth, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },           // Right
             ];
 
-            boundaries.forEach(boundary => {
-                const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
-                const body = world.createRigidBody(bodyDesc);
-                const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
-                world.createCollider(colliderDesc, body);
-            });
+            // boundaries.forEach(boundary => {
+            //     const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
+            //     const body = world.createRigidBody(bodyDesc);
+            //     const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
+            //     world.createCollider(colliderDesc, body);
+            // });
 
             // Define materials
             const materials = [
@@ -649,10 +649,10 @@
 
             // Target positions for sorting
             const targetPositions = {
-                'water': { x: width / 4, y: height / 4 },
-                'iron': { x: (3 * width) / 4, y: height / 4 },
-                'gold': { x: width / 4, y: (3 * height) / 4 },
-                'uranium': { x: (3 * width) / 4, y: (3 * height) / 4 },
+                'water': { x: gameWorldWidth / 4, y: gameWorldHeight / 4 },
+                'iron': { x: (3 * gameWorldWidth) / 4, y: gameWorldHeight / 4 },
+                'gold': { x: gameWorldWidth / 4, y: (3 * gameWorldHeight) / 4 },
+                'uranium': { x: (3 * gameWorldWidth) / 4, y: (3 * gameWorldHeight) / 4 },
             };
 
             // Ship creation
@@ -714,18 +714,18 @@
             }
 
             // Create initial automated ship
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
-            createShip(width / 2, height / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+            createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
 
             // Create player ship
-            const playerShip = createHexagonShip(width / 2 - 100, height / 2 - 100, '#32CD32');
+            const playerShip = createHexagonShip(gameWorldWidth / 2 - 100, gameWorldHeight / 2 - 100, '#32CD32');
 
             // Function to generate circles (materials)
             function generateCircles(count) {
@@ -742,8 +742,8 @@
                     let circleY = playerShip.translation().y + offsetY;
 
                     const margin = 30;
-                    circleX = Math.min(Math.max(circleX, margin), width - margin);
-                    circleY = Math.min(Math.max(circleY, margin), height - margin);
+                    circleX = Math.min(Math.max(circleX, margin), gameWorldWidth - margin);
+                    circleY = Math.min(Math.max(circleY, margin), gameWorldHeight - margin);
 
                     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
                         .setTranslation(circleX, circleY)
@@ -1018,7 +1018,7 @@
                     money -= cost;
                     totalMoneySpent += cost;
                     removeSortedCircles(15);
-                    const newShip = createShip(width / 2, height / 2, getRandomColor());
+                    const newShip = createShip(gameWorldWidth / 2, gameWorldHeight / 2, getRandomColor());
                     shipsPurchased += 1;
                     updateMoney();
 
@@ -1222,7 +1222,11 @@
 
                 playerShip.setLinvel({ x: vx, y: vy }, true);
             }
+
+            
             function resizeCanvas() {
+                
+
                 width = canvas.width = window.innerWidth;
                 height = canvas.height = window.innerHeight;
 
