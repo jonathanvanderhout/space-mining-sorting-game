@@ -26,19 +26,6 @@
 
         canvas {
             display: block;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="%23000033"/><g fill="%23ffffff"><circle cx="10" cy="10" r="1"/><circle cx="30" cy="40" r="0.5"/><circle cx="50" cy="20" r="0.75"/><circle cx="70" cy="60" r="0.4"/><circle cx="90" cy="30" r="0.6"/></g></svg>');
-            background-size: 300px 300px;
-            animation: starsMove 60s linear infinite;
-        }
-
-        @keyframes starsMove {
-            from {
-                background-position: 0 0;
-            }
-
-            to {
-                background-position: 300px 300px;
-            }
         }
 
         #message {
@@ -52,6 +39,7 @@
             text-align: center;
             text-shadow: 0 0 10px #FFD700;
             animation: pulse 2s infinite;
+            z-index: 999;
         }
 
         @keyframes pulse {
@@ -79,6 +67,7 @@
             opacity: 0;
             transition: opacity 2s;
             text-shadow: 0 0 10px #FF69B4;
+            z-index: 999;
         }
 
         .box-label {
@@ -89,6 +78,7 @@
             width: 200px;
             text-shadow: 0 0 5px currentColor;
             transition: all 0.3s ease;
+            z-index: 999;
         }
 
         .box-label:hover {
@@ -228,6 +218,10 @@
     <canvas id="gameCanvas"></canvas>
     <div id="message"></div>
     <div id="funny-message">Oops! The materials are escaping. Time for a space chase!</div>
+    <div id="label-water" class="box-label">Water</div>
+    <div id="label-iron" class="box-label">Iron Ore</div>
+    <div id="label-gold" class="box-label">Gold</div>
+    <div id="label-uranium" class="box-label">Uranium</div>
 
     <!-- Admin Panel Toggle Button -->
     <button id="admin-panel-toggle">☰</button>
@@ -283,8 +277,14 @@
 
         const { Engine, Render, World, Bodies, Body, Events } = Matter;
 
-        let width = window.innerWidth;
-        let height = window.innerHeight;
+        // Define fixed game world size
+        const GAME_WIDTH = 1920;
+        const GAME_HEIGHT = 1080;
+
+        // Calculate scaling factor based on window size
+        let scaleX = window.innerWidth / GAME_WIDTH;
+        let scaleY = window.innerHeight / GAME_HEIGHT;
+        let scale = Math.min(scaleX, scaleY);
 
         const engine = Engine.create();
         engine.world.gravity.y = 0;
@@ -295,12 +295,25 @@
             canvas: document.getElementById('gameCanvas'),
             engine: engine,
             options: {
-                width: width,
-                height: height,
+                width: GAME_WIDTH * scale,
+                height: GAME_HEIGHT * scale,
                 wireframes: false,
-                background: '#000033'
+                background: '#000033',
+                hasBounds: true,
+                showBounds: false,
+                pixelRatio: 1 / scale, // Adjust pixel ratio to scale graphics
             }
         });
+
+        // Adjust renderer bounds to simulate scaling
+        render.bounds.max.x = GAME_WIDTH;
+        render.bounds.max.y = GAME_HEIGHT;
+        render.bounds.min.x = 0;
+        render.bounds.min.y = 0;
+
+        // Adjust the canvas style to fit the window
+        render.canvas.style.width = `${GAME_WIDTH * scale}px`;
+        render.canvas.style.height = `${GAME_HEIGHT * scale}px`;
 
         Render.run(render);
         Engine.run(engine);
@@ -308,10 +321,10 @@
         // Create boundaries and add them to the world
         const boundaryThickness = 10;
         const boundaries = [
-            Bodies.rectangle(width / 2, -boundaryThickness / 2, width, boundaryThickness, { isStatic: true }),
-            Bodies.rectangle(width / 2, height + boundaryThickness / 2, width, boundaryThickness, { isStatic: true }),
-            Bodies.rectangle(-boundaryThickness / 2, height / 2, boundaryThickness, height, { isStatic: true }),
-            Bodies.rectangle(width + boundaryThickness / 2, height / 2, boundaryThickness, height, { isStatic: true }),
+            Bodies.rectangle(GAME_WIDTH / 2, -boundaryThickness / 2, GAME_WIDTH, boundaryThickness, { isStatic: true }),
+            Bodies.rectangle(GAME_WIDTH / 2, GAME_HEIGHT + boundaryThickness / 2, GAME_WIDTH, boundaryThickness, { isStatic: true }),
+            Bodies.rectangle(-boundaryThickness / 2, GAME_HEIGHT / 2, boundaryThickness, GAME_HEIGHT, { isStatic: true }),
+            Bodies.rectangle(GAME_WIDTH + boundaryThickness / 2, GAME_HEIGHT / 2, boundaryThickness, GAME_HEIGHT, { isStatic: true }),
         ];
         World.add(world, boundaries);
 
@@ -338,7 +351,7 @@
         let shipTargets = [];
         let automatedShipSpeed = 1;
 
-        const ship1 = createShip(width / 2, height / 2, '#FF4500');
+        const ship1 = createShip(GAME_WIDTH / 2, GAME_HEIGHT / 2, '#FF4500');
         automatedShips.push(ship1);
         shipTargets.push(null);
 
@@ -363,7 +376,7 @@
             return vertices;
         }
 
-        const ship3 = Bodies.fromVertices(width / 2 - 100, height / 2 - 100, [generateHexagon(23)], {
+        const ship3 = Bodies.fromVertices(GAME_WIDTH / 2 - 100, GAME_HEIGHT / 2 - 100, [generateHexagon(23)], {
             isStatic: false,
             render: {
                 fillStyle: '#32CD32',
@@ -398,8 +411,8 @@
 
                 // Ensure the circle is within the boundaries
                 const margin = circleRadius + 20; // Margin from boundaries
-                circleX = Math.min(Math.max(circleX, margin), width - margin);
-                circleY = Math.min(Math.max(circleY, margin), height - margin);
+                circleX = Math.min(Math.max(circleX, margin), GAME_WIDTH - margin);
+                circleY = Math.min(Math.max(circleY, margin), GAME_HEIGHT - margin);
 
                 const circle = Bodies.circle(circleX, circleY, circleRadius, {
                     render: {
@@ -458,10 +471,10 @@
         generateCircles(25);
 
         const targetPositions = {
-            'water': { x: width / 4, y: height / 4 },
-            'iron': { x: (3 * width) / 4, y: height / 4 },
-            'gold': { x: width / 4, y: (3 * height) / 4 },
-            'uranium': { x: (3 * width) / 4, y: (3 * height) / 4 },
+            'water': { x: GAME_WIDTH / 4, y: GAME_HEIGHT / 4 },
+            'iron': { x: (3 * GAME_WIDTH) / 4, y: GAME_HEIGHT / 4 },
+            'gold': { x: GAME_WIDTH / 4, y: (3 * GAME_HEIGHT) / 4 },
+            'uranium': { x: (3 * GAME_WIDTH) / 4, y: (3 * GAME_HEIGHT) / 4 },
         };
 
         let money = 0;
@@ -534,7 +547,7 @@
                 money -= cost;
                 totalMoneySpent += cost;
                 removeSortedCircles(15);
-                const newShip = createShip(width / 2, height / 2, getRandomColor());
+                const newShip = createShip(GAME_WIDTH / 2, GAME_HEIGHT / 2, getRandomColor());
                 automatedShips.push(newShip);
                 shipTargets.push(null);
                 World.add(world, newShip);
@@ -931,6 +944,28 @@
             // Toggle the 'collapsed' class on the admin panel
             adminPanel.classList.toggle('collapsed');
         });
+
+        // Handle window resize to maintain scaling
+        window.addEventListener('resize', () => {
+            scaleX = window.innerWidth / GAME_WIDTH;
+            scaleY = window.innerHeight / GAME_HEIGHT;
+            scale = Math.min(scaleX, scaleY);
+
+            render.options.width = GAME_WIDTH * scale;
+            render.options.height = GAME_HEIGHT * scale;
+
+            render.canvas.style.width = `${GAME_WIDTH * scale}px`;
+            render.canvas.style.height = `${GAME_HEIGHT * scale}px`;
+
+            render.bounds.max.x = GAME_WIDTH;
+            render.bounds.max.y = GAME_HEIGHT;
+            render.bounds.min.x = 0;
+            render.bounds.min.y = 0;
+
+            render.options.pixelRatio = 1 / scale;
+            Render.setPixelRatio(render, 1 / scale);
+        });
+
     </script>
 </body>
 
