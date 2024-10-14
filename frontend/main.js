@@ -1,6 +1,8 @@
 import './style.css'
 
 import * as RAPIER from '@dimforge/rapier2d-compat';
+import * as drawing from './drawing.js';
+import {isCircleInCorrectArea, updateAutomatedShips} from "./shipmovement.js"
 (async () => {
     // Initialize Rapier physics engine
     await RAPIER.init();
@@ -153,15 +155,8 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
             }
         }
 
-        circles.forEach(body => {
-            if (body.userData.removed) return;
 
-            const position = body.translation();
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, body.userData.radius, 0, 2 * Math.PI);
-            ctx.fillStyle = body.userData.color;
-            ctx.fill();
-        });
+        drawing.drawCircles(ctx, circles)
 
         automatedShips.forEach(body => {
             const position = body.translation();
@@ -240,8 +235,6 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
     const gravity = { x: 0, y: 0 };
     const world = new RAPIER.World(gravity);
 
-    // Time step
-    const timeStep = 1 / 60;
 
     // Variables for game state
     const automatedShips = [];
@@ -249,7 +242,7 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
     let money = 0;
     let totalMoneySpent = 0;
     let shipsPurchased = 1; // Start with one ship
-    const maxShips = 10;
+    const maxShips = 100;
     let speedIncreases = 0;
     const maxSpeedIncreases = 5;
     let automatedShipSpeed = 100;
@@ -358,14 +351,7 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
       createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
 
   }
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
-    // createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
+
 
     // Create player ship
     const playerShip = createHexagonShip(gameWorldWidth / 2 - 100, gameWorldHeight / 2 - 100, '#32CD32');
@@ -425,116 +411,56 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
     generateCircles(1000 );
 
     // Function to move automated ships
-    function moveShipTowards(ship, targetX, targetY, speed) {
-        const position = ship.translation();
-        const angle = Math.atan2(targetY - position.y, targetX - position.x);
+    // function moveShipTowards(ship, targetX, targetY, speed) {
+    //     const position = ship.translation();
+    //     const angle = Math.atan2(targetY - position.y, targetX - position.x);
 
-        const velocityX = Math.cos(angle) * speed;
-        const velocityY = Math.sin(angle) * speed;
+    //     const velocityX = Math.cos(angle) * speed;
+    //     const velocityY = Math.sin(angle) * speed;
 
-        ship.setLinvel({ x: velocityX, y: velocityY }, true);
-        ship.setRotation(angle);
-    }
+    //     ship.setLinvel({ x: velocityX, y: velocityY }, true);
+    //     ship.setRotation(angle);
+    // }
 
-    // Function to manipulate circle's velocity towards target
-    function pushCircleTowards(circle, targetX, targetY) {
-        const position = circle.translation();
-        const angle = Math.atan2(targetY - position.y, targetX - position.x);
-        const pushSpeed = 200;
+    // // Function to manipulate circle's velocity towards target
+    // function pushCircleTowards(circle, targetX, targetY) {
+    //     const position = circle.translation();
+    //     const angle = Math.atan2(targetY - position.y, targetX - position.x);
+    //     const pushSpeed = 200;
 
-        const velocityX = Math.cos(angle) * pushSpeed;
-        const velocityY = Math.sin(angle) * pushSpeed;
+    //     const velocityX = Math.cos(angle) * pushSpeed;
+    //     const velocityY = Math.sin(angle) * pushSpeed;
 
-        circle.setLinvel({ x: velocityX, y: velocityY }, true);
-    }
+    //     circle.setLinvel({ x: velocityX, y: velocityY }, true);
+    // }
 
     // Function to check if a circle is in the correct area
-    function isCircleInCorrectArea(circle, tolerance_starting = 200) {
-        if (circle.userData.removed) {
-            return false;
-        }
+    // function isCircleInCorrectArea(circle, tolerance_starting = 200) {
+    //     if (circle.userData.removed) {
+    //         return false;
+    //     }
 
-        const position = circle.translation();
-        const material = circle.userData.material;
-        const target = targetPositions[material];
+    //     const position = circle.translation();
+    //     const material = circle.userData.material;
+    //     const target = targetPositions[material];
 
-        const tolerance = tolerance_starting;
-        const distance = Math.hypot(position.x - target.x, position.y - target.y);
+    //     const tolerance = tolerance_starting;
+    //     const distance = Math.hypot(position.x - target.x, position.y - target.y);
 
-        if (distance <= tolerance) {
-            circle.userData.isTargeted = false;
-            return true;
-        }
+    //     if (distance <= tolerance) {
+    //         circle.userData.isTargeted = false;
+    //         return true;
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     // Update automation logic for ships to push circles
     function updateAutomation() {
         if (circles.length < 10) {
             generateCircles(1);
         }
-
-        for (let i = 0; i < automatedShips.length; i++) {
-            const ship = automatedShips[i];
-            let currentTarget = shipTargets[i];
-
-            if (currentTarget && currentTarget.userData.removed) {
-                shipTargets[i] = null;
-                currentTarget = null;
-            }
-
-            if (currentTarget && isCircleInCorrectArea(currentTarget)) {
-                currentTarget.userData.isTargeted = false;
-                shipTargets[i] = null;
-                currentTarget = null;
-            }
-
-            if (!currentTarget || currentTarget.userData.isTargeted === false) {
-                let nearestCircle = null;
-                let shortestDistance = Infinity;
-
-                for (let j = 0; j < circles.length; j++) {
-                    const circle = circles[j];
-                    if (!circle.userData.isTargeted && !isCircleInCorrectArea(circle) && !circle.userData.removed) {
-                        const circlePos = circle.translation();
-                        const shipPos = ship.translation();
-                        const distance = Math.hypot(circlePos.x - shipPos.x, circlePos.y - shipPos.y);
-
-                        if (distance < shortestDistance) {
-                            shortestDistance = distance;
-                            nearestCircle = circle;
-                        }
-                    }
-                }
-
-                if (nearestCircle) {
-                    shipTargets[i] = nearestCircle;
-                    nearestCircle.userData.isTargeted = true;
-                }
-            }
-
-            if (shipTargets[i] && !shipTargets[i].userData.removed) {
-                const circle = shipTargets[i];
-                const circlePos = circle.translation();
-                const material = circle.userData.material;
-                const target = targetPositions[material];
-
-                const distanceToTarget = Math.hypot(circlePos.x - target.x, circlePos.y - target.y);
-
-                if (distanceToTarget < 50) {
-                    // Do nothing
-                } else {
-                    const distanceToCircle = Math.hypot(circlePos.x - ship.translation().x, circlePos.y - ship.translation().y);
-
-                    if (distanceToCircle < 30) {
-                        pushCircleTowards(circle, target.x, target.y);
-                    } else {
-                        moveShipTowards(ship, circlePos.x, circlePos.y, automatedShipSpeed);
-                    }
-                }
-            }
-        }
+        updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
     }
 
     // Function to check the win condition
@@ -544,7 +470,7 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
 
         for (let i = 0; i < circles.length; i++) {
             const circle = circles[i];
-            if (isCircleInCorrectArea(circle)) {
+            if (isCircleInCorrectArea(circle,targetPositions)) {
                 money++;
             } else {
                 allCirclesCorrect = false;
@@ -687,7 +613,7 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
 
         for (let i = circles.length - 1; i >= 0 && removedCount < numToRemove; i--) {
             const circle = circles[i];
-            if (isCircleInCorrectArea(circle)) {
+            if (isCircleInCorrectArea(circle, targetPositions)) {
                 const circlePosition = { x: circle.translation().x, y: circle.translation().y };
                 const circleColor = circle.userData.color;
                 const radius = circle.userData.radius;
@@ -748,7 +674,7 @@ import * as RAPIER from '@dimforge/rapier2d-compat';
     function gravityCollectorForce() {
         circles.forEach(circle => {
             circle.resetForces(true)
-            if (!isCircleInCorrectArea(circle, 100) && !circle.userData.removed) {
+            if (!isCircleInCorrectArea(circle, targetPositions, 100) && !circle.userData.removed) {
                 const material = circle.userData.material;
                 const target = targetPositions[material];
                 const circlePos = circle.translation();
