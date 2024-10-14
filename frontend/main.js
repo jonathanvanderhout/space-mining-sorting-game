@@ -2,7 +2,7 @@ import './style.css'
 
 import * as RAPIER from '@dimforge/rapier2d-compat';
 import * as drawing from './drawing.js';
-import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShipsInCircle,moveShipsInFormation } from "./shipmovement.js"
+import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShipsInCircle, moveShipsInFormation } from "./shipmovement.js"
 (async () => {
   // Initialize Rapier physics engine
   await RAPIER.init();
@@ -157,6 +157,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
 
     drawing.drawCircles(ctx, circles)
+    drawing.drawSquares(ctx, squares)
 
     automatedShips.forEach(body => {
       const position = body.translation();
@@ -239,6 +240,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   // Variables for game state
   const automatedShips = [];
   const circles = [];
+  const squares = [];
   let money = 0;
   let totalMoneySpent = 0;
   let shipsPurchased = 1; // Start with one ship
@@ -256,7 +258,6 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const ghostRings = [];
   const ghostCircles = [];
   const redRings = [];
-
   // Create boundaries (static rigid bodies)
   const boundaries = [
     { x: gameWorldWidth / 2, y: 0, w: gameWorldWidth, h: 10 },                 // Top
@@ -398,6 +399,44 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     }
   }
 
+  function generateSquares(count, x, y) {
+    for (let i = 0; i < count; i++) {
+      // Random placement around the provided (x, y) coordinates
+      // let offsetDistance = Math.random() * 30000;  // Random distance
+      let offsetDistance = 1500 +Math.random() * 30000;  // Random distance
+      let angle = Math.random() * Math.PI * 2;   // Random angle
+      let offsetX = Math.cos(angle) * offsetDistance;
+      let offsetY = Math.sin(angle) * offsetDistance;
+  
+      let squareX = x + offsetX;
+      let squareY = y + offsetY;
+  
+  
+      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(squareX, squareY)
+        .setLinearDamping(1);
+      const body = world.createRigidBody(bodyDesc);
+  
+      const size = 20;  // Size of the square
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(size / 2, size / 2);  // Square collider
+      colliderDesc.setRestitution(0.5);
+      const collider = world.createCollider(colliderDesc, body);
+  
+      body.userData = {
+        color: 'white',  // All squares are white
+        size: size,
+        isTargeted: false,
+        collider: collider,
+        removed: false
+      };
+  
+      squares.push(body);  // Assuming you have a `squares` array like the `circles` array
+  
+      // Optionally, you could add some visual effects for square generation if needed
+    }
+  }
+  
+
   function createGhostRing(x, y) {
     const ghostRing = {
       x: x,
@@ -408,7 +447,8 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     ghostRings.push(ghostRing);
   }
 
-  generateCircles(1000);
+  generateCircles(100);
+  generateSquares(100, gameWorldWidth / 2, gameWorldHeight / 2);
 
   // Function to move automated ships
   // function moveShipTowards(ship, targetX, targetY, speed) {
@@ -460,16 +500,18 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     if (circles.length < 10) {
       generateCircles(1);
     }
-    if (true) {
-      const pos = playerShip.translation()
-      // moveShipsInCircleSmooth(automatedShips, pos.x, pos.y, 700, automatedShipSpeed, 150)
-      moveShipsInFormation(automatedShips, pos.x, pos.y, 60, automatedShipSpeed)
-      // moveShipsInCircle(automatedShips, pos.x, pos.y, 300, automatedShipSpeed)
-      // moveShipsTowards(automatedShips, pos.x,pos.y,automatedShipSpeed)
+    switch (shipMovementStrategy) {
+
+      case "circle":
+        const pos = playerShip.translation()
+        moveShipsInCircle(automatedShips, pos.x, pos.y, circleRadius, automatedShipSpeed, 150)
+        // moveShipsInFormation(automatedShips, pos.x, pos.y, 60, automatedShipSpeed)
+        break;
+      default:
+        updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
+        break;
     }
-    else {
-      updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
-    }
+
   }
 
   // Function to check the win condition
@@ -605,8 +647,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       }
     }
   });
-
-  document.getElementById('random-delivery').addEventListener('click', () => {
+  function delivery() {
     if (money >= 5 && circles.length < 300) {
       removeSortedCircles(5);
       money -= 5;
@@ -614,6 +655,9 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       generateCircles(20);
       updateMoney();
     }
+  }
+  document.getElementById('random-delivery').addEventListener('click', () => {
+    delivery()
   });
 
   function removeSortedCircles(numToRemove) {
@@ -787,6 +831,14 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     if (e.code === 'KeyA') wasdKeys.a = false;
     if (e.code === 'KeyD') wasdKeys.d = false;
   });
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && !e.repeat) {
+      delivery()
+      // Handle single space bar press
+
+      // Add your functionality here, e.g., start a new action
+    }
+  });
 
   function controlPlayerShip() {
     const speed = 200;
@@ -823,6 +875,19 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
   // Main game loop
+  let autoPanEnabled = false
+  function autoPanToShip() {
+    if (autoPanEnabled) {
+      const playerPos = playerShip.translation();
+
+      // Calculate new origin to center the player ship on the screen
+      originX = (width / 2) - playerPos.x * scale;
+      originY = (height / 2) - playerPos.y * scale;
+
+      // Redraw the canvas after adjusting the origin
+      // draw();
+    }
+  }
   function gameLoop() {
     if (gameStarted) {
       controlPlayerShip();
@@ -834,6 +899,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       if (gravityCollectorActive) {
         gravityCollectorForce();
       }
+      autoPanToShip()
     }
 
     // ctx.clearRect(0, 0, width, height);
@@ -872,6 +938,41 @@ adminToggleButton.addEventListener('click', () => {
 });
 const leftAdminToggleButton = document.getElementById('left-admin-header');
 const leftAdminPanel = document.getElementById('left-admin-panel');
+
+let shipMovementStrategy = "sort"
+let circleRadius = null
+const circleRadiusControl = document.getElementById('circle-radius-control');
+const radiusSlider = document.getElementById('radius-slider');
+const radiusValue = document.getElementById('radius-value');
+
+document.querySelectorAll('input[name="movement"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.checked) {
+            console.log(`Selected movement: ${this.value}`);
+            if (this.value === 'circle') {
+                circleRadiusControl.classList.add('visible');
+            } else {
+                circleRadiusControl.classList.remove('visible');
+            }
+            shipMovementStrategy = this.value
+
+            // Add your logic here to change the ship movement based on the selected option
+        }
+    });
+});
+
+radiusSlider.addEventListener('input', function() {
+    radiusValue.textContent = this.value;
+    console.log(`Circle radius: ${this.value}`);
+    circleRadius = this.value * 10
+    // Add your logic here to update the ship's circular movement radius
+});
+
+// Initialize the circle radius control visibility
+if (document.querySelector('input[name="movement"]:checked').value === 'circle') {
+    circleRadiusControl.classList.add('visible');
+}
+
 
 // Add a click event listener to the left toggle button
 leftAdminToggleButton.addEventListener('click', () => {

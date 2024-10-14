@@ -6,6 +6,8 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
 </head>
 
 <body>
@@ -37,35 +39,65 @@
         <div class="section">
             <h2>Controls</h2>
             <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
-            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
-            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
-                50)</button>
-            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            
+
+
+
+
+
+
+            <div id="ship-movement-control">
+                <div class="movement-label">Ship Movement</div>
+                <div class="movement-options">
+                    <input type="radio" id="option0" name="movement" value="sort" checked>
+                    <label for="option0" class="movement-option">
+                        <i class="fas fa-th-large"></i>
+                    </label>
+                    <input type="radio" id="option1" name="movement" value="circle" >
+                    <label for="option1" class="movement-option">
+                        <i class="fas fa-circle-notch"></i>
+                    </label>
+    
+                    <input type="radio" id="option2" name="movement" value="follow">
+                    <label for="option2" class="movement-option">
+                        <i class="fas fa-directions"></i>
+                    </label>
+    
+                    <input type="radio" id="option3" name="movement" value="random">
+                    <label for="option3" class="movement-option">
+                        <i class="fas fa-random"></i>
+                    </label>
+    
+                    <input type="radio" id="option4" name="movement" value="static">
+                    <label for="option4" class="movement-option">
+                        <i class="fas fa-anchor"></i>
+                    </label>
+                </div>
+                <div id="circle-radius-control">
+                    <div class="movement-label">Circle Radius</div>
+                    <div class="slider-container">
+                        <span class="slider-label">Radius:</span>
+                        <input type="range" min="10" max="100" value="50" class="slider" id="radius-slider">
+                        <span id="radius-value">50</span>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             <!-- The Play Again button will be appended here -->
         </div>
     </div>

@@ -18,3 +18,18 @@ export function drawCircles(ctx, circles) {
         ctx.fill();
     });
 }
+export function drawSquares(ctx, squares) {
+    squares.forEach(body => {
+      if (body.userData.removed) return;
+  
+      const position = body.translation();
+      const size = body.userData.size;
+  
+      // Draw square
+      ctx.beginPath();
+      ctx.rect(position.x - size / 2, position.y - size / 2, size, size);  // Draw square centered at position
+      ctx.fillStyle = body.userData.color;
+      ctx.fill();
+    });
+  }
+  

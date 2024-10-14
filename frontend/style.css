@@ -309,6 +309,131 @@ html {
   font-size: 24px;
   text-shadow: 0 0 5px #FFD700;
 }
+#ship-movement-control {
+  border: 2px solid #FFD700;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.movement-label {
+  font-size: 12px;
+  padding: 5px;
+  text-align: center;
+  border-bottom: 1px solid #FFD700;
+}
+
+.movement-options {
+  display: flex;
+  justify-content: space-between;
+}
+
+.movement-options input[type="radio"] {
+  display: none;
+}
+
+.movement-option {
+  flex: 1;
+  text-align: center;
+  padding: 10px 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.movement-option:not(:last-child) {
+  border-right: 1px solid #FFD700;
+}
+
+.movement-option:hover {
+  background-color: rgba(255, 215, 0, 0.2);
+}
+
+.movement-options input[type="radio"]:checked + .movement-option {
+  background-color: #FFD700;
+  color: #000033;
+}
+
+.movement-option svg {
+  width: 20px;
+  height: 20px;
+}
+
+
+
+
+
+
+.movement-option:not(:last-child) {
+  border-right: 1px solid #FFD700;
+}
+.movement-option:hover {
+  background-color: rgba(255, 215, 0, 0.2);
+}
+.movement-options input[type="radio"]:checked + .movement-option {
+  background-color: #FFD700;
+  color: #000033;
+}
+.movement-option svg {
+  width: 20px;
+  height: 20px;
+}
+#circle-radius-control {
+  display: none;
+  padding: 10px;
+  border-top: 1px solid #FFD700;
+}
+#circle-radius-control.visible {
+  display: block;
+}
+.slider-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.slider-label {
+  flex: 1;
+  font-size: 12px;
+}
+.slider {
+  flex: 2;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 5px;
+  background: #333366;
+  outline: none;
+  opacity: 0.7;
+  transition: opacity .2s;
+}
+.slider:hover {
+  opacity: 1;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #FFD700;
+  cursor: pointer;
+}
+.slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #FFD700;
+  cursor: pointer;
+}
+#radius-value {
+  flex: 1;
+  text-align: right;
+  font-size: 12px;
+}
+
+
+
+
+
 
 
 #money-display {
