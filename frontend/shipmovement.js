@@ -1,54 +1,98 @@
+// Spatial partitioning grid
+class SpatialGrid {
+    constructor(cellSize) {
+        this.cellSize = cellSize;
+        this.grid = new Map();
+    }
+
+    getKey(x, y) {
+        const cellX = Math.floor(x / this.cellSize);
+        const cellY = Math.floor(y / this.cellSize);
+        return `${cellX},${cellY}`;
+    }
+
+    insert(item) {
+        const pos = item.translation();
+        const key = this.getKey(pos.x, pos.y);
+        if (!this.grid.has(key)) {
+            this.grid.set(key, []);
+        }
+        this.grid.get(key).push(item);
+    }
+
+    getNearbyItems(x, y, radius) {
+        const nearbyItems = [];
+        const cellRadius = Math.ceil(radius / this.cellSize);
+        const centerCellX = Math.floor(x / this.cellSize);
+        const centerCellY = Math.floor(y / this.cellSize);
+
+        for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+            for (let dy = -cellRadius; dy <= cellRadius; dy++) {
+                const key = `${centerCellX + dx},${centerCellY + dy}`;
+                const cell = this.grid.get(key);
+                if (cell) {
+                    nearbyItems.push(...cell);
+                }
+            }
+        }
+
+        return nearbyItems;
+    }
+
+    clear() {
+        this.grid.clear();
+    }
+}
+
 export function updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed) {
+    const grid = new SpatialGrid(200); // Cell size of 200 units
+    circles.forEach(circle => grid.insert(circle));
+
     for (let i = 0; i < automatedShips.length; i++) {
         const ship = automatedShips[i];
         let currentTarget = shipTargets[i];
 
-        // Check if current target is removed or in correct area
         if (currentTarget && (currentTarget.userData.removed || isCircleInCorrectArea(currentTarget, targetPositions))) {
             currentTarget.userData.isTargeted = false;
             shipTargets[i] = null;
             currentTarget = null;
         }
 
-        // Find new target if needed
         if (!currentTarget || !currentTarget.userData.isTargeted) {
-            const nearestCircle = findNearestUntargetedCircle(ship, circles, targetPositions);
+            const shipPos = ship.translation();
+            const nearbyCandidates = grid.getNearbyItems(shipPos.x, shipPos.y, 1000);
+            const nearestCircle = findNearestUntargetedCircle(ship, nearbyCandidates, targetPositions);
             if (nearestCircle) {
                 shipTargets[i] = nearestCircle;
                 nearestCircle.userData.isTargeted = true;
             }
         }
 
-        // Update ship behavior
         if (shipTargets[i] && !shipTargets[i].userData.removed) {
             updateShipBehavior(ship, shipTargets[i], targetPositions, automatedShipSpeed);
         }
     }
 }
 
+
 export function isCircleInCorrectArea(circle, targetPositions, tolerance = 200) {
-    if (circle.userData.removed) {
-        return false;
-    }
+    if (circle.userData.removed) return false;
 
     const position = circle.translation();
-    const material = circle.userData.material;
-    const target = targetPositions[material];
-
-    const distance = getDistance(position, target);
-
-    return distance <= tolerance;
+    const target = targetPositions[circle.userData.material];
+    return getSquaredDistance(position, target) <= tolerance * tolerance;
 }
 
 function findNearestUntargetedCircle(ship, circles, targetPositions) {
     let nearestCircle = null;
-    let shortestDistance = Infinity;
+    let shortestDistanceSquared = Infinity;
+    const shipPos = ship.translation();
 
     for (const circle of circles) {
         if (!circle.userData.isTargeted && !isCircleInCorrectArea(circle, targetPositions) && !circle.userData.removed) {
-            const distance = getDistance(ship.translation(), circle.translation());
-            if (distance < shortestDistance) {
-                shortestDistance = distance;
+            const distanceSquared = getSquaredDistance(shipPos, circle.translation());
+            if (distanceSquared < shortestDistanceSquared) {
+                shortestDistanceSquared = distanceSquared;
                 nearestCircle = circle;
             }
         }
@@ -59,15 +103,14 @@ function findNearestUntargetedCircle(ship, circles, targetPositions) {
 
 function updateShipBehavior(ship, circle, targetPositions, automatedShipSpeed) {
     const circlePos = circle.translation();
-    const material = circle.userData.material;
-    const target = targetPositions[material];
+    const target = targetPositions[circle.userData.material];
+    const distanceToTargetSquared = getSquaredDistance(circlePos, target);
 
-    const distanceToTarget = getDistance(circlePos, target);
+    if (distanceToTargetSquared >= 2500) { // 50^2
+        const shipPos = ship.translation();
+        const distanceToCircleSquared = getSquaredDistance(circlePos, shipPos);
 
-    if (distanceToTarget >= 50) {
-        const distanceToCircle = getDistance(circlePos, ship.translation());
-
-        if (distanceToCircle < 30) {
+        if (distanceToCircleSquared < 900) { // 30^2
             pushCircleTowards(circle, target.x, target.y);
         } else {
             moveShipTowards(ship, circlePos.x, circlePos.y, automatedShipSpeed);
@@ -75,9 +118,12 @@ function updateShipBehavior(ship, circle, targetPositions, automatedShipSpeed) {
     }
 }
 
-function getDistance(pos1, pos2) {
-    return Math.hypot(pos1.x - pos2.x, pos1.y - pos2.y);
+function getSquaredDistance(pos1, pos2) {
+    const dx = pos1.x - pos2.x;
+    const dy = pos1.y - pos2.y;
+    return dx * dx + dy * dy;
 }
+
 function moveShipTowards(ship, targetX, targetY, speed) {
     const position = ship.translation();
     const angle = Math.atan2(targetY - position.y, targetX - position.x);
@@ -89,7 +135,6 @@ function moveShipTowards(ship, targetX, targetY, speed) {
     ship.setRotation(angle);
 }
 
-// Function to manipulate circle's velocity towards target
 function pushCircleTowards(circle, targetX, targetY) {
     const position = circle.translation();
     const angle = Math.atan2(targetY - position.y, targetX - position.x);
@@ -100,7 +145,3 @@ function pushCircleTowards(circle, targetX, targetY) {
 
     circle.setLinvel({ x: velocityX, y: velocityY }, true);
 }
-
-// Assume these functions are defined elsewhere in your code:
-// pushCircleTowards(circle, x, y)
-// moveShipTowards(ship, x, y, speed)

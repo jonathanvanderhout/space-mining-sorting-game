@@ -71,24 +71,24 @@ import {isCircleInCorrectArea, updateAutomatedShips} from "./shipmovement.js"
         }
     });
 
-    canvas.addEventListener('touchmove', (e) => {
-        if (isPanning && e.touches.length === 1) {
-            const rect = canvas.getBoundingClientRect();
-            const x = e.touches[0].clientX - rect.left;
-            const y = e.touches[0].clientY - rect.top;
+    // canvas.addEventListener('touchmove', (e) => {
+    //     if (isPanning && e.touches.length === 1) {
+    //         const rect = canvas.getBoundingClientRect();
+    //         const x = e.touches[0].clientX - rect.left;
+    //         const y = e.touches[0].clientY - rect.top;
 
-            const dx = (x - startPan.x) / scale;
-            const dy = (y - startPan.y) / scale;
+    //         const dx = (x - startPan.x) / scale;
+    //         const dy = (y - startPan.y) / scale;
 
-            originX += dx;
-            originY += dy;
+    //         originX += dx;
+    //         originY += dy;
 
-            startPan.x = x;
-            startPan.y = y;
+    //         startPan.x = x;
+    //         startPan.y = y;
 
-            draw();
-        }
-    });
+    //         draw();
+    //     }
+    // });
 
     canvas.addEventListener('touchend', () => {
         isPanning = false;
