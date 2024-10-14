@@ -124,6 +124,55 @@ function getSquaredDistance(pos1, pos2) {
     return dx * dx + dy * dy;
 }
 
+export function moveShipsTowards(automatedShips, targetX, targetY, speed){
+    for (let i = 0; i < automatedShips.length; i++) {
+        const ship = automatedShips[i];
+        moveShipTowards(ship, targetX, targetY, speed)
+    }
+}
+
+
+
+export function moveShipsInCircle(automatedShips, centerX, centerY, radius, speed) {
+    const angleStep = (2 * Math.PI) / automatedShips.length; // Divide the circle into equal angles
+
+    for (let i = 0; i < automatedShips.length; i++) {
+        const angle = i * angleStep; // Calculate the angle for each ship
+        const targetX = centerX + radius * Math.cos(angle); // Calculate the x coordinate of the point on the circle
+        const targetY = centerY + radius * Math.sin(angle); // Calculate the y coordinate of the point on the circle
+        
+        // Move the ship towards the calculated point on the circle
+        moveShipTowards(automatedShips[i], targetX, targetY, speed);
+    }
+}
+
+export function moveShipsInFormation(automatedShips, leaderTargetX, leaderTargetY, spacing, speed) {
+    if (automatedShips.length === 0) return;
+
+    // Move the leader ship (first in the array) towards the target point
+    const leaderPos = automatedShips[0].translation();
+    moveShipTowards(automatedShips[0], leaderTargetX, leaderTargetY, speed);
+
+    // Each subsequent ship follows the one in front of it
+    for (let i = 1; i < automatedShips.length; i++) {
+        const leadShip = automatedShips[i - 1];
+        const followingShip = automatedShips[i];
+
+        const leadPos = leadShip.translation();
+        const followPos = followingShip.translation();
+
+        // Calculate the target position behind the lead ship
+        const angle = Math.atan2(leadPos.y - followPos.y, leadPos.x - followPos.x);
+        const targetX = leadPos.x - spacing * Math.cos(angle);
+        const targetY = leadPos.y - spacing * Math.sin(angle);
+
+        // Move the following ship towards the calculated target position
+        moveShipTowards(followingShip, targetX, targetY, speed);
+    }
+}
+
+
+
 function moveShipTowards(ship, targetX, targetY, speed) {
     const position = ship.translation();
     const angle = Math.atan2(targetY - position.y, targetX - position.x);
