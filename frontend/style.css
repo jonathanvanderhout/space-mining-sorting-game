@@ -1,0 +1,293 @@
+body,
+html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #000033;
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+  height: 100vh;
+  display: flex;
+}
+
+/* Adjust canvas to fill the available space */
+#gameCanvas {
+  flex-grow: 1;
+}
+
+/* canvas {
+            display: block;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="%23000033"/><g fill="%23ffffff"><circle cx="10" cy="10" r="1"/><circle cx="30" cy="40" r="0.5"/><circle cx="50" cy="20" r="0.75"/><circle cx="70" cy="60" r="0.4"/><circle cx="90" cy="30" r="0.6"/></g></svg>');
+            background-size: 300px 300px;
+            animation: starsMove 60s linear infinite;
+        } */
+
+@keyframes starsMove {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 300px 300px;
+  }
+}
+
+#message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #FFD700;
+  font-size: 48px;
+  display: none;
+  text-align: center;
+  text-shadow: 0 0 10px #FFD700;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.box-label {
+  position: absolute;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  width: 200px;
+  text-shadow: 0 0 5px currentColor;
+  transition: all 0.3s ease;
+}
+
+.box-label:hover {
+  transform: scale(1.1);
+}
+
+#label-water {
+  top: 25%;
+  left: 25%;
+  color: #00FFFF;
+}
+
+#label-iron {
+  top: 25%;
+  left: 75%;
+  transform: translateX(-50%);
+  color: #A9A9A9;
+}
+
+#label-gold {
+  top: 75%;
+  left: 25%;
+  transform: translateY(-50%);
+  color: #FFD700;
+}
+
+#label-uranium {
+  top: 75%;
+  left: 75%;
+  transform: translate(-50%, -50%);
+  color: #00FF00;
+}
+
+#funny-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #FF69B4;
+  font-size: 36px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 2s;
+  text-shadow: 0 0 10px #FF69B4;
+}
+
+.speed-button {
+  display: block;
+  margin: 10px 0;
+  padding: 12px 24px;
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  color: #FFD700;
+  border: 2px solid #FFD700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.speed-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+}
+
+.speed-button:disabled {
+  background-color: transparent;
+  color: #555;
+  border-color: #555;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+/* Instructions Screen Styles */
+#instruction-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 51, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  z-index: 9999;
+}
+
+#instruction-screen h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px #FFD700;
+}
+
+#instruction-screen p {
+  font-size: 24px;
+  max-width: 800px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+#begin-button {
+  padding: 15px 30px;
+  font-size: 24px;
+  background-color: #FF4500;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+#begin-button:hover {
+  background-color: #FF6347;
+  transform: scale(1.05);
+}
+
+/* Styles for Best Times List */
+#best-times {
+  margin-top: 20px;
+}
+
+#best-times h2 {
+  font-size: 32px;
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px #FFD700;
+}
+
+/* Updated styles for the best times list */
+#best-times-list {
+  list-style: none;
+  padding: 0;
+  font-size: 24px;
+  display: flex;
+  /* Use flexbox for horizontal layout */
+  justify-content: center;
+  /* Center the items */
+  flex-wrap: wrap;
+  /* Allow wrapping for responsiveness */
+}
+
+#best-times-list li {
+  margin: 0 15px;
+  /* Horizontal spacing between items */
+  text-shadow: 0 0 5px #FFFFFF;
+  margin-bottom: 0;
+  /* Remove bottom margin */
+}
+
+/* Admin Panel Styles */
+#admin-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 200px;
+  height: 100%;
+  background-color: rgba(0, 0, 33, 0.95);
+  padding: 20px;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  transform: translateX(0);
+  color: #FFD700;
+  z-index: 1000;
+}
+
+#admin-panel.collapsed {
+  transform: translateX(100%);
+}
+
+#admin-panel-toggle {
+  position: fixed;
+  top: 0;
+  right: 0;
+  /* transform: translateY(-50%); */
+  background-color: rgba(0, 0, 33, 0.9);
+  color: #FFD700;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  z-index: 1001;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+}
+
+#admin-panel .section {
+  margin-bottom: 20px;
+}
+
+#admin-panel h2 {
+  margin-top: 0;
+  font-size: 24px;
+  text-shadow: 0 0 5px #FFD700;
+}
+
+#money-display {
+  color: #FFD700;
+  font-size: 18px;
+  /* Adjusted font size */
+}
+
+/* Custom Scrollbar Styles */
+#admin-panel::-webkit-scrollbar {
+  width: 12px;
+}
+
+#admin-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 33, 0.9);
+}
+
+#admin-panel::-webkit-scrollbar-thumb {
+  background-color: #FFD700;
+  border-radius: 6px;
+  border: 3px solid rgba(0, 0, 33, 0.9);
+}
+
+#admin-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #FFD700 rgba(0, 0, 33, 0.9);
+}
