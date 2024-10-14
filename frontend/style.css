@@ -265,6 +265,51 @@ html {
   font-size: 24px;
   text-shadow: 0 0 5px #FFD700;
 }
+/* left admin panel */
+#left-admin-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 100%;
+  background-color: rgba(0, 0, 33, 0.95);
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  transform: translateX(0);
+  color: #FFD700;
+  z-index: 1000;
+}
+
+#left-admin-panel.collapsed {
+  transform: translateX(-100%);
+}
+
+#left-admin-panel-toggle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 33, 0.9);
+  color: #FFD700;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  z-index: 1001;
+  border-radius: 0 10px 10px 0;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+}
+
+#left-admin-panel .section {
+  margin-bottom: 20px;
+}
+
+#left-admin-panel h2 {
+  margin-top: 0;
+  font-size: 24px;
+  text-shadow: 0 0 5px #FFD700;
+}
+
 
 #money-display {
   color: #FFD700;
@@ -290,4 +335,121 @@ html {
 #admin-panel {
   scrollbar-width: thin;
   scrollbar-color: #FFD700 rgba(0, 0, 33, 0.9);
+}
+
+/* Custom Scrollbar Styles for both admin panels */
+#admin-panel::-webkit-scrollbar,
+#left-admin-panel::-webkit-scrollbar {
+  width: 8px;  /* Narrow width */
+}
+
+#admin-panel::-webkit-scrollbar-track,
+#left-admin-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 33, 0.5);  /* Slightly transparent background */
+}
+
+#admin-panel::-webkit-scrollbar-thumb,
+#left-admin-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 215, 0, 0.7);  /* Slightly transparent gold color */
+  border-radius: 4px;
+  border: 2px solid rgba(0, 0, 33, 0.5);
+}
+
+#admin-panel::-webkit-scrollbar-thumb:hover,
+#left-admin-panel::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 215, 0, 0.9);  /* More opaque on hover */
+}
+
+/* For Firefox */
+#admin-panel,
+#left-admin-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 215, 0, 0.7) rgba(0, 0, 33, 0.5);
+}
+
+
+
+#admin-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 200px; /* Same width as the admin panel */
+    background-color: rgba(0, 0, 33, 0.95); /* Same as admin panel */
+    color: #FFD700;
+    padding: 10px 20px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+    z-index: 1002; /* Higher than the admin panel to stay on top */
+}
+
+#admin-header h2 {
+    margin: 0;
+    font-size: 24px;
+    text-shadow: 0 0 5px #FFD700;
+}
+
+/* Adjust the admin panel to make room for the header */
+#admin-panel {
+    top: 50px; /* Adjust this value based on the height of your header */
+    height: calc(100% - 50px); /* Subtract the header height from the panel height */
+}
+
+/* Adjust the toggle button position */
+#admin-panel-toggle {
+    top: 50px; /* Match the top of the admin panel */
+}
+
+
+
+#left-admin-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 200px; /* Same width as the left admin panel */
+  background-color: rgba(0, 0, 33, 0.95); /* Same as left admin panel */
+  color: #FFD700;
+  padding: 10px 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+  z-index: 1002; /* Higher than the admin panel to stay on top */
+}
+
+#left-admin-header h2 {
+  margin: 0;
+  font-size: 24px;
+  text-shadow: 0 0 5px #FFD700;
+}
+
+/* Adjust the left admin panel to make room for the header */
+#left-admin-panel {
+  top: 50px; /* Adjust this value based on the height of your header */
+  height: calc(100% - 50px); /* Subtract the header height from the panel height */
+}
+
+/* Adjust the left toggle button position */
+#left-admin-panel-toggle {
+  top: 50px; /* Match the top of the left admin panel */
+}
+
+
+
+#admin-header, #left-admin-header {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#admin-header:hover, #left-admin-header:hover {
+  background-color: rgba(0, 0, 33, 1);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+#admin-header:active, #left-admin-header:active {
+  transform: scale(0.98);
+}
+
+#admin-header h2, #left-admin-header h2 {
+  transition: all 0.3s ease;
+}
+
+#admin-header:hover h2, #left-admin-header:hover h2 {
+  color: #FFFFFF;
+  text-shadow: 0 0 10px #FFD700;
 }

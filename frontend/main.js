@@ -855,7 +855,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   });
 
 })();
-const adminToggleButton = document.getElementById('admin-panel-toggle');
+const adminToggleButton = document.getElementById('admin-header');
 const adminPanel = document.getElementById('admin-panel');
 
 // Add a click event listener to the toggle button
@@ -868,6 +868,21 @@ adminToggleButton.addEventListener('click', () => {
     // adminToggleButton.textContent = 'Open Admin Panel';
   } else {
     // adminToggleButton.textContent = 'Close Admin Panel';
+  }
+});
+const leftAdminToggleButton = document.getElementById('left-admin-header');
+const leftAdminPanel = document.getElementById('left-admin-panel');
+
+// Add a click event listener to the left toggle button
+leftAdminToggleButton.addEventListener('click', () => {
+  // Toggle the 'collapsed' class on the left admin panel
+  leftAdminPanel.classList.toggle('collapsed');
+
+  // Optionally, change the button text or icon
+  if (leftAdminPanel.classList.contains('collapsed')) {
+    // leftAdminToggleButton.textContent = 'Open Left Admin Panel';
+  } else {
+    // leftAdminToggleButton.textContent = 'Close Left Admin Panel';
   }
 });
 

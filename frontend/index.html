@@ -1,13 +1,15 @@
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite App</title>
-  </head>
-  <body>
-    <canvas style="border: 1px solid red;" id="gameCanvas"></canvas>
+</head>
+
+<body>
+    <canvas  id="gameCanvas"></canvas>
     <!-- <div id="message"></div>
     <div id="funny-message">Oops! The materials are escaping. Time for a space chase!</div>
     <div id="label-water" class="box-label">Water</div>
@@ -15,8 +17,63 @@
     <div id="label-gold" class="box-label">Gold</div>
     <div id="label-uranium" class="box-label">Uranium</div> -->
 
+
+
+
+    <!-- Left Admin Panel -->
+
+    <div id="left-admin-header">
+        <h2>Left Admin ☰</h2>
+    </div>
+    <div id="left-admin-panel">
+        <div class="section">
+            <h2>Game Stats</h2>
+            <div id="left-money-display">
+                <div id="left-money-stats">
+                    Sorted Resources: 0<br>Total Resources Spent: 0
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>Controls</h2>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
+            <button id="left-buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
+            <button id="left-buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost:
+                50)</button>
+            <button id="left-random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <!-- The Play Again button will be appended here -->
+        </div>
+    </div>
+
     <!-- Admin Panel Toggle Button -->
-    <button id="admin-panel-toggle">☰</button>
+    <div id="admin-header">
+        <h2>Admin Header</h2>
+    </div>
 
     <!-- Admin Panel -->
     <div id="admin-panel">
@@ -56,5 +113,6 @@
         <button id="begin-button">Begin</button>
     </div>
     <script type="module" src="/main.js"></script>
-  </body>
+</body>
+
 </html>
