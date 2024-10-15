@@ -246,8 +246,8 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   let shipsPurchased = 1; // Start with one ship
   const maxShips = 100;
   let speedIncreases = 0;
-  const maxSpeedIncreases = 5;
-  let automatedShipSpeed = 100;
+  const maxSpeedIncreases = 100;
+  let automatedShipSpeed = 1000;
   let shipTargets = [];
   let gravityCollectorPurchased = false;
   let gravityCollectorStrength = 1;
@@ -266,12 +266,12 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     { x: gameWorldWidth, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },           // Right
   ];
 
-  // boundaries.forEach(boundary => {
-  //     const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
-  //     const body = world.createRigidBody(bodyDesc);
-  //     const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
-  //     world.createCollider(colliderDesc, body);
-  // });
+  boundaries.forEach(boundary => {
+      const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
+      const body = world.createRigidBody(bodyDesc);
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
+      world.createCollider(colliderDesc, body);
+  });
 
   // Define materials
   const materials = [
@@ -371,9 +371,9 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       let circleX = playerShip.translation().x + offsetX;
       let circleY = playerShip.translation().y + offsetY;
 
-      const margin = 30;
-      circleX = Math.min(Math.max(circleX, margin), gameWorldWidth - margin);
-      circleY = Math.min(Math.max(circleY, margin), gameWorldHeight - margin);
+      // const margin = 30;
+      // circleX = Math.min(Math.max(circleX, margin), gameWorldWidth - margin);
+      // circleY = Math.min(Math.max(circleY, margin), gameWorldHeight - margin);
 
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(circleX, circleY)
@@ -398,7 +398,28 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       }, 50);
     }
   }
-
+  function removeMovingSquares(squares) {
+    const velocityThreshold = 0.01; // Define a small threshold for "not moving"
+  
+    for (let i = squares.length - 1; i >= 0; i--) {
+      const square = squares[i];
+      const velocity = square.linvel(); // Get the linear velocity of the square
+  
+      // Check if the square's velocity is below the threshold
+      const isMoving = Math.abs(velocity.x) > velocityThreshold || Math.abs(velocity.y) > velocityThreshold;
+  
+      // If the square is not moving, remove it
+      if (isMoving) {
+        // Remove the collider and body from the physics world
+        world.removeCollider(square.userData.collider);
+        world.removeRigidBody(square);
+  
+        // Remove from the squares array
+        squares.splice(i, 1);
+      }
+    }
+  }
+  
   function generateSquares(count, x, y) {
     for (let i = 0; i < count; i++) {
       // Random placement around the provided (x, y) coordinates
@@ -417,7 +438,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         .setLinearDamping(1);
       const body = world.createRigidBody(bodyDesc);
   
-      const size = 20;  // Size of the square
+      const size = 100;  // Size of the square
       const colliderDesc = RAPIER.ColliderDesc.cuboid(size / 2, size / 2);  // Square collider
       colliderDesc.setRestitution(0.5);
       const collider = world.createCollider(colliderDesc, body);
@@ -447,7 +468,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     ghostRings.push(ghostRing);
   }
 
-  generateCircles(100);
+  generateCircles(1000);
   generateSquares(100, gameWorldWidth / 2, gameWorldHeight / 2);
 
   // Function to move automated ships
@@ -511,10 +532,25 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
         break;
     }
+    removeMovingSquares(squares)
 
   }
 
   // Function to check the win condition
+  function capCircleVelocity(circle, maxSpeed) {
+    const velocity = circle.linvel(); // Get the current velocity
+    const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y); // Calculate speed (magnitude)
+
+    if (currentSpeed > maxSpeed) {
+        // Scale down the velocity to match the max speed
+        const scale = maxSpeed / currentSpeed;
+        const newVelocityX = velocity.x * scale;
+        const newVelocityY = velocity.y * scale;
+
+        // Set the new capped velocity
+        circle.setLinvel({ x: newVelocityX, y: newVelocityY }, true);
+    }
+}
   function checkWinCondition() {
     let allCirclesCorrect = true;
     money = 0;
@@ -522,6 +558,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     for (let i = 0; i < circles.length; i++) {
       const circle = circles[i];
       if (isCircleInCorrectArea(circle, targetPositions)) {
+        capCircleVelocity(circle,100)
         money++;
       } else {
         allCirclesCorrect = false;
@@ -841,17 +878,27 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   });
 
   function controlPlayerShip() {
-    const speed = 200;
+    const speed = automatedShipSpeed;
     let vx = 0;
     let vy = 0;
 
-    if (wasdKeys.w) vy -= speed;
-    if (wasdKeys.s) vy += speed;
-    if (wasdKeys.a) vx -= speed;
-    if (wasdKeys.d) vx += speed;
+    if (wasdKeys.w) vy -= 1;
+    if (wasdKeys.s) vy += 1;
+    if (wasdKeys.a) vx -= 1;
+    if (wasdKeys.d) vx += 1;
+
+    // Calculate the length of the vector (vx, vy)
+    const magnitude = Math.sqrt(vx * vx + vy * vy);
+
+    // If the player is moving (i.e., magnitude > 0), normalize the vector and apply speed
+    if (magnitude > 0) {
+        vx = (vx / magnitude) * speed;
+        vy = (vy / magnitude) * speed;
+    }
 
     playerShip.setLinvel({ x: vx, y: vy }, true);
-  }
+}
+
 
 
   function resizeCanvas() {
@@ -875,7 +922,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
   // Main game loop
-  let autoPanEnabled = false
+  let autoPanEnabled = true
   function autoPanToShip() {
     if (autoPanEnabled) {
       const playerPos = playerShip.translation();

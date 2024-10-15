@@ -43,10 +43,12 @@ class SpatialGrid {
         this.grid.clear();
     }
 }
-
 export function updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed) {
     const grid = new SpatialGrid(200); // Cell size of 200 units
+    // const unsortedCircles = circles.filter(circle => ! isCircleInCorrectArea(circle,targetPositions ))
+    // unsortedCircles.forEach(circle => grid.insert(circle));
     circles.forEach(circle => grid.insert(circle));
+    
 
     for (let i = 0; i < automatedShips.length; i++) {
         const ship = automatedShips[i];
@@ -60,7 +62,16 @@ export function updateAutomatedShips(automatedShips, shipTargets, circles, targe
 
         if (!currentTarget || !currentTarget.userData.isTargeted) {
             const shipPos = ship.translation();
-            const nearbyCandidates = grid.getNearbyItems(shipPos.x, shipPos.y, 1000);
+            let nearbyCandidates = grid.getNearbyItems(shipPos.x, shipPos.y, 1000);
+
+            // Increase search radius dynamically if no candidates found
+            let searchRadius = 1000;
+            const maxRadius = 10000; // Define a reasonable maximum search radius
+            while (nearbyCandidates.length === 0 && searchRadius <= maxRadius) {
+                searchRadius += 1000; // Expand the radius by 1000 units
+                nearbyCandidates = grid.getNearbyItems(shipPos.x, shipPos.y, searchRadius);
+            }
+
             const nearestCircle = findNearestUntargetedCircle(ship, nearbyCandidates, targetPositions);
             if (nearestCircle) {
                 shipTargets[i] = nearestCircle;
@@ -73,6 +84,37 @@ export function updateAutomatedShips(automatedShips, shipTargets, circles, targe
         }
     }
 }
+
+
+// export function updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed) {
+//     const grid = new SpatialGrid(200); // Cell size of 200 units
+//     circles.forEach(circle => grid.insert(circle));
+
+//     for (let i = 0; i < automatedShips.length; i++) {
+//         const ship = automatedShips[i];
+//         let currentTarget = shipTargets[i];
+
+//         if (currentTarget && (currentTarget.userData.removed || isCircleInCorrectArea(currentTarget, targetPositions))) {
+//             currentTarget.userData.isTargeted = false;
+//             shipTargets[i] = null;
+//             currentTarget = null;
+//         }
+
+//         if (!currentTarget || !currentTarget.userData.isTargeted) {
+//             const shipPos = ship.translation();
+//             const nearbyCandidates = grid.getNearbyItems(shipPos.x, shipPos.y, 1000);
+//             const nearestCircle = findNearestUntargetedCircle(ship, nearbyCandidates, targetPositions);
+//             if (nearestCircle) {
+//                 shipTargets[i] = nearestCircle;
+//                 nearestCircle.userData.isTargeted = true;
+//             }
+//         }
+
+//         if (shipTargets[i] && !shipTargets[i].userData.removed) {
+//             updateShipBehavior(ship, shipTargets[i], targetPositions, automatedShipSpeed);
+//         }
+//     }
+// }
 
 
 export function isCircleInCorrectArea(circle, targetPositions, tolerance = 200) {
@@ -111,7 +153,7 @@ function updateShipBehavior(ship, circle, targetPositions, automatedShipSpeed) {
         const distanceToCircleSquared = getSquaredDistance(circlePos, shipPos);
 
         if (distanceToCircleSquared < 900) { // 30^2
-            pushCircleTowards(circle, target.x, target.y);
+            pushCircleTowards(circle, target.x, target.y, automatedShipSpeed);
         } else {
             moveShipTowards(ship, circlePos.x, circlePos.y, automatedShipSpeed);
         }
@@ -133,18 +175,33 @@ export function moveShipsTowards(automatedShips, targetX, targetY, speed){
 
 
 
-export function moveShipsInCircle(automatedShips, centerX, centerY, radius, speed) {
+export function moveShipsInCircle(automatedShips, centerX, centerY, radius, speed, threshold = 0.001) {
     const angleStep = (2 * Math.PI) / automatedShips.length; // Divide the circle into equal angles
+    const thresholdSquared = threshold * threshold; // Avoid using sqrt by working with squared distances
 
     for (let i = 0; i < automatedShips.length; i++) {
         const angle = i * angleStep; // Calculate the angle for each ship
         const targetX = centerX + radius * Math.cos(angle); // Calculate the x coordinate of the point on the circle
         const targetY = centerY + radius * Math.sin(angle); // Calculate the y coordinate of the point on the circle
-        
-        // Move the ship towards the calculated point on the circle
-        moveShipTowards(automatedShips[i], targetX, targetY, speed);
+
+        // Get the ship's current position
+        const shipPos = automatedShips[i].translation();
+
+        // Calculate the squared distance between the ship's position and the target position
+        const dx = targetX - shipPos.x;
+        const dy = targetY - shipPos.y;
+        const distanceSquared = dx * dx + dy * dy;
+
+        // If the distance is greater than the threshold, move the ship
+        if (distanceSquared > thresholdSquared) {
+            moveShipTowards(automatedShips[i], targetX, targetY, speed);
+        }
+        else{
+            moveShipTowards(automatedShips[i], targetX, targetY, 50);
+        }
     }
 }
+
 
 export function moveShipsInFormation(automatedShips, leaderTargetX, leaderTargetY, spacing, speed) {
     if (automatedShips.length === 0) return;
@@ -172,22 +229,47 @@ export function moveShipsInFormation(automatedShips, leaderTargetX, leaderTarget
 }
 
 
-
 function moveShipTowards(ship, targetX, targetY, speed) {
     const position = ship.translation();
-    const angle = Math.atan2(targetY - position.y, targetX - position.x);
+    let vx = targetX - position.x;
+    let vy = targetY - position.y;
 
-    const velocityX = Math.cos(angle) * speed;
-    const velocityY = Math.sin(angle) * speed;
+    // Calculate the squared magnitude of the velocity vector (vx, vy)
+    const magnitudeSquared = vx * vx + vy * vy;
 
-    ship.setLinvel({ x: velocityX, y: velocityY }, true);
+    // If the magnitude squared is greater than 0, normalize the vector and apply the speed
+    if (magnitudeSquared > 0) {
+        // Avoid sqrt for comparison, but use it for normalization when applying speed
+        const magnitude = Math.sqrt(magnitudeSquared);
+        vx = (vx / magnitude) * speed;
+        vy = (vy / magnitude) * speed;
+    }
+
+    // Set the linear velocity
+    ship.setLinvel({ x: vx, y: vy }, true);
+
+    // Set the rotation of the ship to face the target
+    const angle = Math.atan2(vy, vx); // Angle based on the normalized velocity
     ship.setRotation(angle);
 }
 
-function pushCircleTowards(circle, targetX, targetY) {
+
+
+// function moveShipTowards(ship, targetX, targetY, speed) {
+//     const position = ship.translation();
+//     const angle = Math.atan2(targetY - position.y, targetX - position.x);
+
+//     const velocityX = Math.cos(angle) * speed;
+//     const velocityY = Math.sin(angle) * speed;
+
+//     ship.setLinvel({ x: velocityX, y: velocityY }, true);
+//     ship.setRotation(angle);
+// }
+
+function pushCircleTowards(circle, targetX, targetY, shipSpeed) {
     const position = circle.translation();
     const angle = Math.atan2(targetY - position.y, targetX - position.x);
-    const pushSpeed = 200;
+    const pushSpeed = shipSpeed * 1.001;
 
     const velocityX = Math.cos(angle) * pushSpeed;
     const velocityY = Math.sin(angle) * pushSpeed;
