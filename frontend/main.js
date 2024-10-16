@@ -101,6 +101,39 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   let originY = 0;
   const minScale = 0.05;
   const maxScale = 2.5;
+
+
+  function darken(ctx, playerX, playerY, r) {
+    ctx.save();
+  
+    // Define inner and outer radii for the gradient
+    const innerRadius = r;
+    const outerRadius = r * 1.5; // Adjust the multiplier to control gradient width
+  
+    // Create a radial gradient centered on the player ship
+    const gradient = ctx.createRadialGradient(
+      playerX, playerY, innerRadius,
+      playerX, playerY, outerRadius
+    );
+  
+    // Define the color stops for the gradient
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');   // Fully transparent at the inner radius
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 1)');   // Fully opaque black at the outer radius
+  
+    // Set the fill style to the gradient
+    ctx.fillStyle = gradient;
+  
+    // Fill the entire canvas with the gradient
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  
+    ctx.restore();
+  }
+  
+  
+  
+  
+  
+  
   function draw() {
 
     // Clear the canvas
@@ -212,9 +245,14 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     ctx.fillStyle = playerShip.userData.color;
     ctx.fill();
     ctx.restore();
-
     // Restore the context state
     ctx.restore();
+    const playerPos = playerShip.translation();
+    const canvasPlayerX = (playerPos.x * scale) + originX;
+    const canvasPlayerY = (playerPos.y * scale) + originY;
+    const canvasLightRadius = 3000 * scale;
+    darken(ctx, canvasPlayerX, canvasPlayerY, canvasLightRadius)
+
   }
 
 
@@ -1039,7 +1077,7 @@ const leftAdminPanel = document.getElementById('left-admin-panel');
 
 let shipMovementStrategy = "sort"
 let cameraLocation = "user_controlled"
-let circleRadius = null
+let circleRadius = 500
 const circleRadiusControl = document.getElementById('circle-radius-control');
 const radiusSlider = document.getElementById('radius-slider');
 const radiusValue = document.getElementById('radius-value');
