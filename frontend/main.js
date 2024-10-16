@@ -102,6 +102,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const minScale = 0.05;
   const maxScale = 2.5;
   function draw() {
+
     // Clear the canvas
     ctx.clearRect(0, 0, width, height);
 
@@ -158,6 +159,10 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
     drawing.drawCircles(ctx, circles)
     drawing.drawSquares(ctx, squares)
+    drawing.drawRing(ctx, 3000, gameWorldWidth / 2, gameWorldHeight / 2)
+    drawing.drawRing(ctx, 30000, gameWorldWidth / 2, gameWorldHeight / 2)
+    drawing.drawRing(ctx, 300000, gameWorldWidth / 2, gameWorldHeight / 2)
+    drawing.drawResourceAreas(ctx, targetPositions, materials, 200)
 
     automatedShips.forEach(body => {
       const position = body.translation();
@@ -244,10 +249,12 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   let money = 0;
   let totalMoneySpent = 0;
   let shipsPurchased = 1; // Start with one ship
-  const maxShips = 100;
+  const maxShips = 200;
   let speedIncreases = 0;
   const maxSpeedIncreases = 100;
-  let automatedShipSpeed = 1000;
+  let automatedShipSpeed = 100;
+  let startingCirclesCount = 25;
+  let startingShipCount = 100
   let shipTargets = [];
   let gravityCollectorPurchased = false;
   let gravityCollectorStrength = 1;
@@ -259,19 +266,19 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const ghostCircles = [];
   const redRings = [];
   // Create boundaries (static rigid bodies)
-  const boundaries = [
-    { x: gameWorldWidth / 2, y: 0, w: gameWorldWidth, h: 10 },                 // Top
-    { x: gameWorldWidth / 2, y: gameWorldHeight, w: gameWorldWidth, h: 10 },            // Bottom
-    { x: 0, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },               // Left
-    { x: gameWorldWidth, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },           // Right
-  ];
+  // const boundaries = [
+  //   { x: gameWorldWidth / 2, y: 0, w: gameWorldWidth, h: 10 },                 // Top
+  //   { x: gameWorldWidth / 2, y: gameWorldHeight, w: gameWorldWidth, h: 10 },            // Bottom
+  //   { x: 0, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },               // Left
+  //   { x: gameWorldWidth, y: gameWorldHeight / 2, w: 10, h: gameWorldHeight },           // Right
+  // ];
 
-  boundaries.forEach(boundary => {
-      const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
-      const body = world.createRigidBody(bodyDesc);
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
-      world.createCollider(colliderDesc, body);
-  });
+  // boundaries.forEach(boundary => {
+  //     const bodyDesc = RAPIER.RigidBodyDesc.fixed().setTranslation(boundary.x, boundary.y);
+  //     const body = world.createRigidBody(bodyDesc);
+  //     const colliderDesc = RAPIER.ColliderDesc.cuboid(boundary.w / 2, boundary.h / 2);
+  //     world.createCollider(colliderDesc, body);
+  // });
 
   // Define materials
   const materials = [
@@ -348,7 +355,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
 
   // Create initial automated ship
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < startingShipCount; i++) {
     createShip(gameWorldWidth / 2, gameWorldHeight / 2, '#FF4500');
 
   }
@@ -388,7 +395,9 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         isTargeted: false,
         collider: collider,
         radius: 10,
-        removed: false
+        removed: false,
+        isInCorrectArea: false
+
       };
       circles.push(body);
 
@@ -400,49 +409,50 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
   function removeMovingSquares(squares) {
     const velocityThreshold = 0.01; // Define a small threshold for "not moving"
-  
+
     for (let i = squares.length - 1; i >= 0; i--) {
       const square = squares[i];
       const velocity = square.linvel(); // Get the linear velocity of the square
-  
+
       // Check if the square's velocity is below the threshold
       const isMoving = Math.abs(velocity.x) > velocityThreshold || Math.abs(velocity.y) > velocityThreshold;
-  
+
       // If the square is not moving, remove it
       if (isMoving) {
         // Remove the collider and body from the physics world
         world.removeCollider(square.userData.collider);
         world.removeRigidBody(square);
-  
+
         // Remove from the squares array
         squares.splice(i, 1);
       }
     }
   }
-  
-  function generateSquares(count, x, y) {
+
+  function generateSquares(count, x, y, sortingAreaRadius, worldRadius) {
     for (let i = 0; i < count; i++) {
       // Random placement around the provided (x, y) coordinates
       // let offsetDistance = Math.random() * 30000;  // Random distance
-      let offsetDistance = 1500 +Math.random() * 30000;  // Random distance
+
+      let offsetDistance = 1500 + Math.random() * 30000;  // Random distance
       let angle = Math.random() * Math.PI * 2;   // Random angle
       let offsetX = Math.cos(angle) * offsetDistance;
       let offsetY = Math.sin(angle) * offsetDistance;
-  
+
       let squareX = x + offsetX;
       let squareY = y + offsetY;
-  
-  
+
+
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(squareX, squareY)
         .setLinearDamping(1);
       const body = world.createRigidBody(bodyDesc);
-  
+
       const size = 100;  // Size of the square
       const colliderDesc = RAPIER.ColliderDesc.cuboid(size / 2, size / 2);  // Square collider
       colliderDesc.setRestitution(0.5);
       const collider = world.createCollider(colliderDesc, body);
-  
+
       body.userData = {
         color: 'white',  // All squares are white
         size: size,
@@ -450,13 +460,13 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         collider: collider,
         removed: false
       };
-  
+
       squares.push(body);  // Assuming you have a `squares` array like the `circles` array
-  
+
       // Optionally, you could add some visual effects for square generation if needed
     }
   }
-  
+
 
   function createGhostRing(x, y) {
     const ghostRing = {
@@ -468,7 +478,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     ghostRings.push(ghostRing);
   }
 
-  generateCircles(1000);
+  generateCircles(startingCirclesCount);
   generateSquares(100, gameWorldWidth / 2, gameWorldHeight / 2);
 
   // Function to move automated ships
@@ -524,10 +534,15 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     switch (shipMovementStrategy) {
 
       case "circle":
-        const pos = playerShip.translation()
+        var pos = playerShip.translation()
         moveShipsInCircle(automatedShips, pos.x, pos.y, circleRadius, automatedShipSpeed, 150)
         // moveShipsInFormation(automatedShips, pos.x, pos.y, 60, automatedShipSpeed)
         break;
+      case "follow":
+        var pos = playerShip.translation()
+
+        moveShipsInFormation(automatedShips, pos.x, pos.y, 60, automatedShipSpeed)
+        break
       default:
         updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
         break;
@@ -542,23 +557,23 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y); // Calculate speed (magnitude)
 
     if (currentSpeed > maxSpeed) {
-        // Scale down the velocity to match the max speed
-        const scale = maxSpeed / currentSpeed;
-        const newVelocityX = velocity.x * scale;
-        const newVelocityY = velocity.y * scale;
+      // Scale down the velocity to match the max speed
+      const scale = maxSpeed / currentSpeed;
+      const newVelocityX = velocity.x * scale;
+      const newVelocityY = velocity.y * scale;
 
-        // Set the new capped velocity
-        circle.setLinvel({ x: newVelocityX, y: newVelocityY }, true);
+      // Set the new capped velocity
+      circle.setLinvel({ x: newVelocityX, y: newVelocityY }, true);
     }
-}
+  }
   function checkWinCondition() {
     let allCirclesCorrect = true;
     money = 0;
 
     for (let i = 0; i < circles.length; i++) {
       const circle = circles[i];
-      if (isCircleInCorrectArea(circle, targetPositions)) {
-        capCircleVelocity(circle,100)
+      if (circle.userData.isInCorrectArea) {
+        capCircleVelocity(circle, 100)
         money++;
       } else {
         allCirclesCorrect = false;
@@ -685,7 +700,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     }
   });
   function delivery() {
-    if (money >= 5 && circles.length < 300) {
+    if (money >= 5 && circles.length < 700) {
       removeSortedCircles(5);
       money -= 5;
       totalMoneySpent += 5;
@@ -892,12 +907,12 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
     // If the player is moving (i.e., magnitude > 0), normalize the vector and apply speed
     if (magnitude > 0) {
-        vx = (vx / magnitude) * speed;
-        vy = (vy / magnitude) * speed;
+      vx = (vx / magnitude) * speed;
+      vy = (vy / magnitude) * speed;
     }
 
     playerShip.setLinvel({ x: vx, y: vy }, true);
-}
+  }
 
 
 
@@ -937,6 +952,12 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
   function gameLoop() {
     if (gameStarted) {
+
+      for (let i = 0; i < circles.length; i++) {
+        const circle = circles[i]
+        circle.userData.isInCorrectArea = isCircleInCorrectArea(circle, targetPositions)
+      }
+
       controlPlayerShip();
       updateAutomation();
 
@@ -993,31 +1014,31 @@ const radiusSlider = document.getElementById('radius-slider');
 const radiusValue = document.getElementById('radius-value');
 
 document.querySelectorAll('input[name="movement"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        if (this.checked) {
-            console.log(`Selected movement: ${this.value}`);
-            if (this.value === 'circle') {
-                circleRadiusControl.classList.add('visible');
-            } else {
-                circleRadiusControl.classList.remove('visible');
-            }
-            shipMovementStrategy = this.value
+  radio.addEventListener('change', function () {
+    if (this.checked) {
+      console.log(`Selected movement: ${this.value}`);
+      if (this.value === 'circle') {
+        circleRadiusControl.classList.add('visible');
+      } else {
+        circleRadiusControl.classList.remove('visible');
+      }
+      shipMovementStrategy = this.value
 
-            // Add your logic here to change the ship movement based on the selected option
-        }
-    });
+      // Add your logic here to change the ship movement based on the selected option
+    }
+  });
 });
 
-radiusSlider.addEventListener('input', function() {
-    radiusValue.textContent = this.value;
-    console.log(`Circle radius: ${this.value}`);
-    circleRadius = this.value * 10
-    // Add your logic here to update the ship's circular movement radius
+radiusSlider.addEventListener('input', function () {
+  radiusValue.textContent = this.value;
+  console.log(`Circle radius: ${this.value}`);
+  circleRadius = this.value * 10
+  // Add your logic here to update the ship's circular movement radius
 });
 
 // Initialize the circle radius control visibility
 if (document.querySelector('input[name="movement"]:checked').value === 'circle') {
-    circleRadiusControl.classList.add('visible');
+  circleRadiusControl.classList.add('visible');
 }
 
 

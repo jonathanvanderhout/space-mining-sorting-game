@@ -44,7 +44,7 @@ class SpatialGrid {
     }
 }
 export function updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed) {
-    const grid = new SpatialGrid(200); // Cell size of 200 units
+    const grid = new SpatialGrid(2000); // Cell size of 200 units
     // const unsortedCircles = circles.filter(circle => ! isCircleInCorrectArea(circle,targetPositions ))
     // unsortedCircles.forEach(circle => grid.insert(circle));
     circles.forEach(circle => grid.insert(circle));
@@ -54,7 +54,7 @@ export function updateAutomatedShips(automatedShips, shipTargets, circles, targe
         const ship = automatedShips[i];
         let currentTarget = shipTargets[i];
 
-        if (currentTarget && (currentTarget.userData.removed || isCircleInCorrectArea(currentTarget, targetPositions))) {
+        if (currentTarget && (currentTarget.userData.removed || currentTarget.userData.isInCorrectArea )) {
             currentTarget.userData.isTargeted = false;
             shipTargets[i] = null;
             currentTarget = null;
@@ -131,7 +131,7 @@ function findNearestUntargetedCircle(ship, circles, targetPositions) {
     const shipPos = ship.translation();
 
     for (const circle of circles) {
-        if (!circle.userData.isTargeted && !isCircleInCorrectArea(circle, targetPositions) && !circle.userData.removed) {
+        if (!circle.userData.isTargeted && !circle.userData.isInCorrectArea && !circle.userData.removed) {
             const distanceSquared = getSquaredDistance(shipPos, circle.translation());
             if (distanceSquared < shortestDistanceSquared) {
                 shortestDistanceSquared = distanceSquared;
