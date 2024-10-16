@@ -38,7 +38,6 @@
         </div>
         <div class="section">
             <h2>Controls</h2>
-            <button id="left-increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
             
 
 
@@ -83,6 +82,43 @@
                 </div>
             </div>
 
+        </br>
+            <div id="camera-movement-control">
+                <div class="movement-label">Camera Location</div>
+                <div class="movement-options">
+                    <input type="radio" id="camera-option0" name="camera" value="user_controlled" checked>
+                    <label for="camera-option0" class="movement-option">
+                        <i class="fas fa-mouse-pointer"></i>
+                    </label>
+                    <input type="radio" id="camera-option1" name="camera" value="player_ship" >
+                    <label for="camera-option1" class="movement-option">
+                        <i class="fas fa-space-shuttle"></i>
+                    </label>
+    
+                    <input type="radio" id="camera-option2" name="camera" value="random_ship">
+                    <label for="camera-option2" class="movement-option">
+                        <i class="fas fa-directions"></i>
+                    </label>
+    
+                    <input type="radio" id="camera-option3" name="camera" value="random">
+                    <label for="camera-option3" class="movement-option">
+                        <i class="fas fa-random"></i>
+                    </label>
+    
+                    <!-- <input type="radio" id="camera-option4" name="camera" value="static">
+                    <label for="camera-option4" class="movement-option">
+                        <i class="fas fa-anchor"></i>
+                    </label> -->
+                </div>
+                <div id="circle-radius-control">
+                    <div class="movement-label">Circle Radius</div>
+                    <div class="slider-container">
+                        <span class="slider-label">Radius:</span>
+                        <input type="range" min="10" max="100" value="50" class="slider" id="radius-slider">
+                        <span id="radius-value">50</span>
+                    </div>
+                </div>
+            </div>
 
 
 

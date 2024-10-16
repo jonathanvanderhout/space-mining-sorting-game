@@ -937,18 +937,13 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
   // Main game loop
-  let autoPanEnabled = true
+  let autoPanEnabled = false
   function autoPanToShip() {
-    if (autoPanEnabled) {
       const playerPos = playerShip.translation();
 
-      // Calculate new origin to center the player ship on the screen
       originX = (width / 2) - playerPos.x * scale;
       originY = (height / 2) - playerPos.y * scale;
 
-      // Redraw the canvas after adjusting the origin
-      // draw();
-    }
   }
   function gameLoop() {
     if (gameStarted) {
@@ -967,7 +962,16 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       if (gravityCollectorActive) {
         gravityCollectorForce();
       }
-      autoPanToShip()
+      switch(cameraLocation){
+        case "user_controlled":
+          break;
+        case "player_ship":
+          autoPanToShip()
+          break;
+        default:
+          break;
+
+      }
     }
 
     // ctx.clearRect(0, 0, width, height);
@@ -1008,6 +1012,7 @@ const leftAdminToggleButton = document.getElementById('left-admin-header');
 const leftAdminPanel = document.getElementById('left-admin-panel');
 
 let shipMovementStrategy = "sort"
+let cameraLocation = "user_controlled"
 let circleRadius = null
 const circleRadiusControl = document.getElementById('circle-radius-control');
 const radiusSlider = document.getElementById('radius-slider');
@@ -1025,6 +1030,16 @@ document.querySelectorAll('input[name="movement"]').forEach(radio => {
       shipMovementStrategy = this.value
 
       // Add your logic here to change the ship movement based on the selected option
+    }
+  });
+});
+
+document.querySelectorAll('input[name="camera"]').forEach(radio => {
+  radio.addEventListener('change', function () {
+    if (this.checked) {
+      cameraLocation = this.value
+      console.log(`Selected camera: ${this.value}`);
+     
     }
   });
 });

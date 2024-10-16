@@ -44,7 +44,7 @@ class SpatialGrid {
     }
 }
 export function updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed) {
-    const grid = new SpatialGrid(2000); // Cell size of 200 units
+    const grid = new SpatialGrid(3000); // Cell size of 200 units
     // const unsortedCircles = circles.filter(circle => ! isCircleInCorrectArea(circle,targetPositions ))
     // unsortedCircles.forEach(circle => grid.insert(circle));
     circles.forEach(circle => grid.insert(circle));
