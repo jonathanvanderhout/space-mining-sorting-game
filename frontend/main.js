@@ -156,6 +156,22 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       }
     }
 
+    for (let i = ghostSquares.length - 1; i >= 0; i--) {
+      const ghostSquare = ghostSquares[i];
+      ghostSquare.radius *= 0.9;
+      ghostSquare.opacity *= 0.9;
+      if (ghostSquare.opacity <= 0.1 || ghostSquare.radius <= 1) {
+        ghostSquares.splice(i, 1);
+      } else {
+        ctx.beginPath();
+        ctx.arc(ghostSquare.x, ghostSquare.y, ghostSquare.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = ghostSquare.color;
+        ctx.globalAlpha = ghostSquare.opacity;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
 
     drawing.drawCircles(ctx, circles)
     drawing.drawSquares(ctx, squares)
@@ -252,7 +268,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const maxShips = 200;
   let speedIncreases = 0;
   const maxSpeedIncreases = 100;
-  let automatedShipSpeed = 100;
+  let automatedShipSpeed = 1000;
   let startingCirclesCount = 25;
   let startingShipCount = 100
   let shipTargets = [];
@@ -264,6 +280,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   let startTime = null;
   const ghostRings = [];
   const ghostCircles = [];
+  const ghostSquares = [];
   const redRings = [];
   // Create boundaries (static rigid bodies)
   // const boundaries = [
@@ -420,9 +437,18 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       // If the square is not moving, remove it
       if (isMoving) {
         // Remove the collider and body from the physics world
+        let pos = square.translation()
+
         world.removeCollider(square.userData.collider);
         world.removeRigidBody(square);
-
+        const ghostSquare = {
+          x: pos.x,
+          y: pos.y,
+          radius: 300 * 1.2,
+          color: "white",
+          opacity: 1
+        };
+        ghostSquares.push(ghostSquare);
         // Remove from the squares array
         squares.splice(i, 1);
       }
@@ -479,7 +505,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
 
   generateCircles(startingCirclesCount);
-  generateSquares(100, gameWorldWidth / 2, gameWorldHeight / 2);
+  generateSquares(1000, gameWorldWidth / 2, gameWorldHeight / 2);
 
   // Function to move automated ships
   // function moveShipTowards(ship, targetX, targetY, speed) {
