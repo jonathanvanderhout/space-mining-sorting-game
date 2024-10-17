@@ -105,35 +105,35 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   function darken(ctx, playerX, playerY, r) {
     ctx.save();
-  
+
     // Define inner and outer radii for the gradient
     const innerRadius = r;
     const outerRadius = r * 1.5; // Adjust the multiplier to control gradient width
-  
+
     // Create a radial gradient centered on the player ship
     const gradient = ctx.createRadialGradient(
       playerX, playerY, innerRadius,
       playerX, playerY, outerRadius
     );
-  
+
     // Define the color stops for the gradient
     gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');   // Fully transparent at the inner radius
     gradient.addColorStop(1, 'rgba(0, 0, 0, 1)');   // Fully opaque black at the outer radius
-  
+
     // Set the fill style to the gradient
     ctx.fillStyle = gradient;
-  
+
     // Fill the entire canvas with the gradient
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  
+
     ctx.restore();
   }
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
   function draw() {
 
     // Clear the canvas
@@ -462,36 +462,39 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       }, 50);
     }
   }
-  function removeMovingSquares(squares) {
-    const velocityThreshold = 0.01; // Define a small threshold for "not moving"
+  let globalAngle = Math.random() * Math.PI * 2; // Start with a random angle
 
-    for (let i = squares.length - 1; i >= 0; i--) {
+  function updateGlobalAngle() {
+    const angleChangeRate = 0.1; // Adjust for how quickly the angle changes
+    globalAngle += ( - 0.5) * angleChangeRate;
+  }
+  function updateSquareSpeeds(squares, maxSpeed) {
+    const forceMagnitude = 500000; // Adjust to control movement intensity
+
+    for (let i = 0; i < squares.length; i++) {
       const square = squares[i];
-      const velocity = square.linvel(); // Get the linear velocity of the square
 
-      // Check if the square's velocity is below the threshold
-      const isMoving = Math.abs(velocity.x) > velocityThreshold || Math.abs(velocity.y) > velocityThreshold;
+      // Optional: Add slight variation per square
+      const variation = (Math.random() - 0.5) * 0.2; // Small variation factor
+      const angle = globalAngle + variation;
 
-      // If the square is not moving, remove it
-      if (isMoving) {
-        // Remove the collider and body from the physics world
-        let pos = square.translation()
+      const forceX = Math.cos(angle) * forceMagnitude;
+      const forceY = Math.sin(angle) * forceMagnitude;
 
-        world.removeCollider(square.userData.collider);
-        world.removeRigidBody(square);
-        const ghostSquare = {
-          x: pos.x,
-          y: pos.y,
-          radius: 300 * 1.2,
-          color: "white",
-          opacity: 1
-        };
-        ghostSquares.push(ghostSquare);
-        // Remove from the squares array
-        squares.splice(i, 1);
+      // Apply the force to the square
+      square.applyImpulse({ x: forceX, y: forceY }, true);
+
+      // Limit the velocity to the max speed
+      const velocity = square.linvel();
+      const speed = Math.hypot(velocity.x, velocity.y);
+
+      if (speed > maxSpeed) {
+        const scale = maxSpeed / speed;
+        square.setLinvel({ x: velocity.x * scale, y: velocity.y * scale }, true);
       }
     }
   }
+
 
   function generateSquares(count, x, y, sortingAreaRadius, worldRadius) {
     for (let i = 0; i < count; i++) {
@@ -512,17 +515,23 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         .setLinearDamping(1);
       const body = world.createRigidBody(bodyDesc);
 
+
+
       const size = 100;  // Size of the square
-      const colliderDesc = RAPIER.ColliderDesc.cuboid(size / 2, size / 2);  // Square collider
-      colliderDesc.setRestitution(0.5);
+      const colliderDesc = RAPIER.ColliderDesc.cuboid(size / 2, size / 2)
+        .setRestitution(0.5)
+        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS); // Enable collision events
+
       const collider = world.createCollider(colliderDesc, body);
+
 
       body.userData = {
         color: 'white',  // All squares are white
         size: size,
         isTargeted: false,
         collider: collider,
-        removed: false
+        removed: false,
+        type: "square"
       };
 
       squares.push(body);  // Assuming you have a `squares` array like the `circles` array
@@ -543,7 +552,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
 
   generateCircles(startingCirclesCount);
-  generateSquares(1000, gameWorldWidth / 2, gameWorldHeight / 2);
+  generateSquares(500, gameWorldWidth / 2, gameWorldHeight / 2);
 
   // Function to move automated ships
   // function moveShipTowards(ship, targetX, targetY, speed) {
@@ -611,7 +620,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
         break;
     }
-    removeMovingSquares(squares)
+    // removeMovingSquares(squares)
 
   }
 
@@ -1003,13 +1012,18 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   // Main game loop
   let autoPanEnabled = false
   function autoPanToShip() {
-      const playerPos = playerShip.translation();
+    const playerPos = playerShip.translation();
 
-      originX = (width / 2) - playerPos.x * scale;
-      originY = (height / 2) - playerPos.y * scale;
+    originX = (width / 2) - playerPos.x * scale;
+    originY = (height / 2) - playerPos.y * scale;
 
   }
-  
+  setInterval(() => {
+    updateSquareSpeeds(squares, 1000)
+    updateGlobalAngle();
+  }, 1000)
+
+  const eventQueue = new RAPIER.EventQueue(true);
   function gameLoop() {
     if (gameStarted) {
 
@@ -1022,12 +1036,18 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       updateAutomation();
 
       checkWinCondition();
-      world.step();
+      world.step(eventQueue);
+      eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+        if (started) {
+          console.log({ handle1, handle2, started })
+          handleCollision(handle1, handle2);
+        }
+      });
 
       if (gravityCollectorActive) {
         gravityCollectorForce();
       }
-      switch(cameraLocation){
+      switch (cameraLocation) {
         case "user_controlled":
           break;
         case "player_ship":
@@ -1044,6 +1064,51 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
     requestAnimationFrame(gameLoop);
   }
+  function handleCollision(handle1, handle2) {
+    const collider1 = world.getCollider(handle1);
+    const collider2 = world.getCollider(handle2);
+
+    const body1 = collider1.parent();
+    const body2 = collider2.parent();
+
+    const type1 = body1.userData.type;
+    const type2 = body2.userData.type;
+    console.log({ type1, type2 })
+
+    // Check if one body is a square and the other is not
+    if (type1 === 'square' && type2 !== 'square') {
+      removeSquareByBody(body1);
+    } else if (type2 === 'square' && type1 !== 'square') {
+      removeSquareByBody(body2);
+    }
+  }
+  function removeSquareByBody(squareBody) {
+    const index = squares.findIndex(sq => sq.handle === squareBody.handle);
+    if (index !== -1) {
+      removeSquare(squares[index], index);
+    }
+  }
+  function removeSquare(square, index) {
+    const pos = square.translation();
+
+    // Remove the collider and body from the physics world
+    world.removeCollider(square.userData.collider);
+    world.removeRigidBody(square);
+
+    // Create ghost square effect
+    const ghostSquare = {
+      x: pos.x,
+      y: pos.y,
+      radius: 300 * 1.2,
+      color: 'white',
+      opacity: 1,
+    };
+    ghostSquares.push(ghostSquare);
+
+    // Remove the square from the array
+    squares.splice(index, 1);
+  }
+
 
   // Display best times when the instruction screen is shown
   displayBestTimes();
@@ -1104,7 +1169,7 @@ document.querySelectorAll('input[name="camera"]').forEach(radio => {
     if (this.checked) {
       cameraLocation = this.value
       console.log(`Selected camera: ${this.value}`);
-     
+
     }
   });
 });
