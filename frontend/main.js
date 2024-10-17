@@ -1009,6 +1009,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       originY = (height / 2) - playerPos.y * scale;
 
   }
+  
   function gameLoop() {
     if (gameStarted) {
 
