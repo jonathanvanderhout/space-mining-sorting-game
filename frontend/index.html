@@ -11,7 +11,7 @@
 </head>
 
 <body>
-    <canvas  id="gameCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
     <!-- <div id="message"></div>
     <div id="funny-message">Oops! The materials are escaping. Time for a space chase!</div>
     <div id="label-water" class="box-label">Water</div>
@@ -25,7 +25,7 @@
     <!-- Left Admin Panel -->
 
     <div id="left-admin-header">
-        <h2>Left Admin ☰</h2>
+        <h2>Ship Controls ☰</h2>
     </div>
     <div id="left-admin-panel">
         <div class="section">
@@ -38,13 +38,6 @@
         </div>
         <div class="section">
             <h2>Controls</h2>
-            
-
-
-
-
-
-
             <div id="ship-movement-control">
                 <div class="movement-label">Ship Movement</div>
                 <div class="movement-options">
@@ -52,21 +45,21 @@
                     <label for="option0" class="movement-option">
                         <i class="fas fa-th-large"></i>
                     </label>
-                    <input type="radio" id="option1" name="movement" value="circle" >
+                    <input type="radio" id="option1" name="movement" value="circle">
                     <label for="option1" class="movement-option">
                         <i class="fas fa-circle-notch"></i>
                     </label>
-    
+
                     <input type="radio" id="option2" name="movement" value="follow">
                     <label for="option2" class="movement-option">
                         <i class="fas fa-directions"></i>
                     </label>
-    
+
                     <input type="radio" id="option3" name="movement" value="random">
                     <label for="option3" class="movement-option">
                         <i class="fas fa-random"></i>
                     </label>
-    
+
                     <input type="radio" id="option4" name="movement" value="static">
                     <label for="option4" class="movement-option">
                         <i class="fas fa-anchor"></i>
@@ -82,7 +75,7 @@
                 </div>
             </div>
 
-        </br>
+            </br>
             <div id="camera-movement-control">
                 <div class="movement-label">Camera Location</div>
                 <div class="movement-options">
@@ -90,21 +83,21 @@
                     <label for="camera-option0" class="movement-option">
                         <i class="fas fa-mouse-pointer"></i>
                     </label>
-                    <input type="radio" id="camera-option1" name="camera" value="player_ship" >
+                    <input type="radio" id="camera-option1" name="camera" value="player_ship">
                     <label for="camera-option1" class="movement-option">
                         <i class="fas fa-space-shuttle"></i>
                     </label>
-    
+
                     <input type="radio" id="camera-option2" name="camera" value="random_ship">
                     <label for="camera-option2" class="movement-option">
                         <i class="fas fa-directions"></i>
                     </label>
-    
+
                     <input type="radio" id="camera-option3" name="camera" value="random">
                     <label for="camera-option3" class="movement-option">
                         <i class="fas fa-random"></i>
                     </label>
-    
+
                     <!-- <input type="radio" id="camera-option4" name="camera" value="static">
                     <label for="camera-option4" class="movement-option">
                         <i class="fas fa-anchor"></i>
@@ -121,26 +114,13 @@
             </div>
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
             <!-- The Play Again button will be appended here -->
         </div>
     </div>
 
     <!-- Admin Panel Toggle Button -->
     <div id="admin-header">
-        <h2>Admin Header</h2>
+        <h2>Stats / Upgrades</h2>
     </div>
 
     <!-- Admin Panel -->
@@ -154,11 +134,13 @@
             </div>
         </div>
         <div class="section">
-            <h2>Controls</h2>
+            <!-- <h2>Controls</h2> -->
+            <button id="random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+
             <button id="increase-speed" class="speed-button">Speed Increase (cost: 5) 0/5</button>
             <button id="buy-ship" class="speed-button">Buy New Ship (cost: 15) 1/10</button>
             <button id="buy-gravity-collector" class="speed-button" disabled>Buy Gravity Collector (Cost: 50)</button>
-            <button id="random-delivery" class="speed-button">Resources Delivery (cost 5 for 20)</button>
+            <button id="auto-delivery" class="speed-button">Purchase auto Delivery System</button>
             <!-- The Play Again button will be appended here -->
         </div>
     </div>

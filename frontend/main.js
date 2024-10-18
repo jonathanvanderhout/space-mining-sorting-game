@@ -306,11 +306,19 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const maxShips = 200;
   let speedIncreases = 0;
   const maxSpeedIncreases = 100;
-  let automatedShipSpeed = 1000;
+  let automatedShipSpeed = 200;
   let startingCirclesCount = 25;
-  let startingShipCount = 100
+  let startingShipCount = 50
   let shipTargets = [];
   let gravityCollectorPurchased = false;
+  let autoDeliverySystemsPurchased = 0
+  let autoDeliveryLocations = [
+    { x: 0, y: 0 },
+    { x: gameWorldWidth / 2, y: gameWorldHeight / 2 },
+    { x: gameWorldWidth, y: gameWorldHeight },
+    { x: 0, y: gameWorldHeight },
+    { x: gameWorldWidth, y: 0 }]
+
   let gravityCollectorStrength = 1;
   let gravityCollectorActive = false;
   let gameWon = false;
@@ -420,7 +428,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const playerShip = createHexagonShip(gameWorldWidth / 2 - 100, gameWorldHeight / 2 - 100, '#32CD32');
 
   // Function to generate circles (materials)
-  function generateCircles(count) {
+  function generateCircles(count, location = null) {
     for (let i = 0; i < count; i++) {
       const material = materials[Math.floor(Math.random() * materials.length)];
 
@@ -429,9 +437,16 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       let angle = Math.random() * Math.PI * 2;
       let offsetX = Math.cos(angle) * offsetDistance;
       let offsetY = Math.sin(angle) * offsetDistance;
-
-      let circleX = playerShip.translation().x + offsetX;
-      let circleY = playerShip.translation().y + offsetY;
+      let circleX
+      let circleY
+      if (location === null) {
+        circleX = playerShip.translation().x + offsetX;
+        circleY = playerShip.translation().y + offsetY;
+      }
+      else {
+        circleX = location.x + offsetX;
+        circleY = location.y + offsetY;
+      }
 
       // const margin = 30;
       // circleX = Math.min(Math.max(circleX, margin), gameWorldWidth - margin);
@@ -466,7 +481,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   function updateGlobalAngle() {
     const angleChangeRate = 0.1; // Adjust for how quickly the angle changes
-    globalAngle += ( - 0.5) * angleChangeRate;
+    globalAngle += (- 0.5) * angleChangeRate;
   }
   function updateSquareSpeeds(squares, maxSpeed) {
     const forceMagnitude = 500000; // Adjust to control movement intensity
@@ -772,17 +787,37 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       }
     }
   });
-  function delivery() {
+  function delivery(location = null) {
     if (money >= 5 && circles.length < 700) {
       removeSortedCircles(5);
       money -= 5;
       totalMoneySpent += 5;
-      generateCircles(20);
+      generateCircles(20, location);
       updateMoney();
+    }
+  }
+  function freeDelivery(location = null) {
+    if (circles.length < 700) {
+      generateCircles(1, location);
     }
   }
   document.getElementById('random-delivery').addEventListener('click', () => {
     delivery()
+  });
+  document.getElementById('auto-delivery').addEventListener('click', () => {
+    autoDeliverySystemsPurchased += 1
+    if (autoDeliverySystemsPurchased == 1) {
+
+
+      setInterval(() => {
+        console.log(autoDeliveryLocations)
+        for (var i = 0; i < autoDeliveryLocations.length; i++) {
+          freeDelivery(autoDeliveryLocations[i])
+        }
+
+      }, 1000)
+    }
+
   });
 
   function removeSortedCircles(numToRemove) {
