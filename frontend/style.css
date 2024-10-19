@@ -309,7 +309,7 @@ html {
   font-size: 24px;
   text-shadow: 0 0 5px #FFD700;
 }
-#ship-movement-control, #camera-movement-control {
+#ship-movement-control, #camera-movement-control, #player-ship-movement-control {
   border: 2px solid #FFD700;
   border-radius: 5px;
   overflow: hidden;

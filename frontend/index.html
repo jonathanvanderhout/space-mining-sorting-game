@@ -113,6 +113,37 @@
                 </div>
             </div>
 
+        </br>
+        <div id="player-ship-movement-control">
+            <div class="movement-label">Player Ship Control</div>
+            <div class="movement-options">
+                <input type="radio" id="player-ship-option0" name="player-ship" value="user_controlled" checked>
+                <label for="player-ship-option0" class="movement-option">
+                    <i class="fas fa-mouse-pointer"></i>
+                </label>
+                <input type="radio" id="player-ship-option1" name="player-ship" value="return_home">
+                <label for="player-ship-option1" class="movement-option">
+                    <i class="fas fa-home"></i>
+                </label>
+                <input type="radio" id="player-ship-option2" name="player-ship" value="hunt">
+                <label for="player-ship-option2" class="movement-option">
+                    <i class="fas fa-crosshairs"></i>
+                </label>
+                <input type="radio" id="player-ship-option3" name="player-ship" value="dance">
+                <label for="player-ship-option3" class="movement-option">
+                    <i class="fas fa-running"></i>
+                </label>
+            </div>
+            <div id="circle-radius-control">
+                <div class="movement-label">Circle Radius</div>
+                <div class="slider-container">
+                    <span class="slider-label">Radius:</span>
+                    <input type="range" min="10" max="100" value="50" class="slider" id="radius-slider">
+                    <span id="radius-value">50</span>
+                </div>
+            </div>
+        </div>
+
 
             <!-- The Play Again button will be appended here -->
         </div>

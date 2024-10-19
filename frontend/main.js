@@ -208,7 +208,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
     drawing.drawCircles(ctx, circles)
     drawing.drawSquares(ctx, squares)
-    drawing.drawRing(ctx, 3000, gameWorldWidth / 2, gameWorldHeight / 2)
+    drawing.drawRing(ctx, safeRadius, gameWorldWidth / 2, gameWorldHeight / 2)
     drawing.drawRing(ctx, 30000, gameWorldWidth / 2, gameWorldHeight / 2)
     drawing.drawRing(ctx, 300000, gameWorldWidth / 2, gameWorldHeight / 2)
     drawing.drawResourceAreas(ctx, targetPositions, materials, 200)
@@ -229,6 +229,28 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       ctx.fill();
       ctx.restore();
     });
+
+
+    // Inside the draw function, after drawing other ships
+    pirateShips.forEach(body => {
+      if (body.userData.isDestroyed) return;
+
+      const position = body.translation();
+      ctx.save();
+      ctx.translate(position.x, position.y);
+      ctx.rotate(body.rotation());
+
+      // Draw the triangle shape
+      ctx.beginPath();
+      ctx.moveTo(0 * pirateShipScale, -20 * pirateShipScale);  // Tip of the triangle
+      ctx.lineTo(-10 * pirateShipScale, 20 * pirateShipScale); // Left base
+      ctx.lineTo(10 * pirateShipScale, 20 * pirateShipScale);  // Right base
+      ctx.closePath();
+      ctx.fillStyle = body.userData.color;
+      ctx.fill();
+      ctx.restore();
+    });
+
 
     const position = playerShip.translation();
     ctx.save();
@@ -300,13 +322,22 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const automatedShips = [];
   const circles = [];
   const squares = [];
+
+  const safeRadius = 3000
+  const pirateShips = []; // Array to hold pirate ships
+  const pirateShipScale = 5;
+  const pirateShipVertices = [
+    { x: 0 * pirateShipScale, y: -20 * pirateShipScale },  // Tip of the triangle (forward direction)
+    { x: -10 * pirateShipScale, y: 20 * pirateShipScale }, // Left base
+    { x: 10 * pirateShipScale, y: 20 * pirateShipScale }   // Right base
+  ];
   let money = 0;
   let totalMoneySpent = 0;
   let shipsPurchased = 1; // Start with one ship
   const maxShips = 200;
   let speedIncreases = 0;
   const maxSpeedIncreases = 100;
-  let automatedShipSpeed = 200;
+  let automatedShipSpeed = 5000;
   let startingCirclesCount = 25;
   let startingShipCount = 50
   let shipTargets = [];
@@ -392,6 +423,38 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     shipTargets.push(null);
     return body;
   }
+
+  function createPirateShip(x, y, color) {
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, y)
+      .setLinearDamping(1)
+      .setAngularDamping(1);
+
+    const body = world.createRigidBody(bodyDesc);
+
+    // Convert pirateShipVertices to a flat array
+    const points = [];
+    pirateShipVertices.forEach(vertex => {
+      points.push(vertex.x);
+      points.push(vertex.y);
+    });
+
+    const colliderDesc = RAPIER.ColliderDesc.convexHull(points);
+    colliderDesc.setRestitution(0.5);
+    colliderDesc.setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS); // Enable collision events if needed
+    const collider = world.createCollider(colliderDesc, body);
+
+    body.userData = {
+      color,
+      type: 'pirateShip',
+      collider: collider,
+      isDestroyed: false
+    };
+
+    pirateShips.push(body);
+    return body;
+  }
+
 
   // Function to create player-controlled hexagon ship
   function createHexagonShip(x, y, color) {
@@ -568,6 +631,25 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   generateCircles(startingCirclesCount);
   generateSquares(500, gameWorldWidth / 2, gameWorldHeight / 2);
+  // Spawn a pirate ship at the top of the game world
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
+  createPirateShip(gameWorldWidth / 2, 2000, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+  createPirateShip(0, 0, '#FF0000'); // Red color
+
 
   // Function to move automated ships
   // function moveShipTowards(ship, targetX, targetY, speed) {
@@ -638,6 +720,238 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     // removeMovingSquares(squares)
 
   }
+  function updatePirateShips() {
+    const playerPos = playerShip.translation();
+    const safeCenter = { x: gameWorldWidth / 2, y: gameWorldHeight / 2 };
+    // const safeRadius = safeRadius /* Your safe radius value here */;
+    const maxSpeed = 2000;
+  
+    const dxPlayerToCenter = playerPos.x - safeCenter.x;
+    const dyPlayerToCenter = playerPos.y - safeCenter.y;
+    const distancePlayerToCenter = Math.hypot(dxPlayerToCenter, dyPlayerToCenter);
+  
+    // Determine if the player ship is inside or outside the safe radius
+    const playerInsideSafeRadius = distancePlayerToCenter < safeRadius;
+  
+    if (playerInsideSafeRadius) {
+      // Player is inside the safe radius, pirate ships circle the safe radius
+      circleShips();
+    } else {
+      // Player is outside the safe radius, pirate ships move in V formation towards the player
+      vFormationShips();
+    }
+  
+    function circleShips() {
+      // Your existing circleShips function code
+      const angleIncrement = (Math.PI / 180) * 2; // Move 2 degrees ahead per update
+  
+      // Get active pirate ships
+      const activePirateShips = pirateShips.filter(
+        (pirateShip) => !pirateShip.userData.isDestroyed
+      );
+  
+      const numPirateShips = activePirateShips.length;
+      if (numPirateShips === 0) return; // No ships to update
+  
+      // Lead ship
+      const leadShip = activePirateShips[0];
+      const leadShipPos = leadShip.translation();
+      const dxLeadToCenter = leadShipPos.x - safeCenter.x;
+      const dyLeadToCenter = leadShipPos.y - safeCenter.y;
+      let angleLeadShip = Math.atan2(dyLeadToCenter, dxLeadToCenter);
+  
+      // Calculate lead ship's target angle
+      let targetAngleLeadShip = angleLeadShip + angleIncrement;
+  
+      // Normalize the angle
+      targetAngleLeadShip = ((targetAngleLeadShip + Math.PI) % (2 * Math.PI)) - Math.PI;
+  
+      // Calculate the target point on the circle for lead ship
+      const leadShipTargetPos = {
+        x: safeCenter.x + safeRadius * Math.cos(targetAngleLeadShip),
+        y: safeCenter.y + safeRadius * Math.sin(targetAngleLeadShip),
+      };
+  
+      // Set lead ship's velocity towards target point
+      let dx = leadShipTargetPos.x - leadShipPos.x;
+      let dy = leadShipTargetPos.y - leadShipPos.y;
+      let distance = Math.hypot(dx, dy);
+      let velocity = {
+        x: (dx / distance) * maxSpeed,
+        y: (dy / distance) * maxSpeed,
+      };
+      leadShip.setLinvel(velocity, true);
+  
+      // Rotate the ship to face the movement direction
+      leadShip.setRotation(Math.atan2(velocity.y, velocity.x) + Math.PI / 2);
+  
+      // For other ships
+      for (let i = 1; i < numPirateShips; i++) {
+        const pirateShip = activePirateShips[i];
+        const piratePos = pirateShip.translation();
+  
+        // Calculate the angle offset for this ship to equally space ships around the circle
+        const angleOffset = ((2 * Math.PI) / numPirateShips) * i;
+  
+        let targetAngle = targetAngleLeadShip + angleOffset;
+        // Normalize the angle
+        targetAngle = ((targetAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
+  
+        // Calculate the target point on the circle
+        const targetPos = {
+          x: safeCenter.x + safeRadius * Math.cos(targetAngle),
+          y: safeCenter.y + safeRadius * Math.sin(targetAngle),
+        };
+  
+        // Set ship's velocity towards target point
+        dx = targetPos.x - piratePos.x;
+        dy = targetPos.y - piratePos.y;
+        distance = Math.hypot(dx, dy);
+        velocity = {
+          x: (dx / distance) * maxSpeed,
+          y: (dy / distance) * maxSpeed,
+        };
+        pirateShip.setLinvel(velocity, true);
+  
+        // Rotate the ship to face the movement direction
+        pirateShip.setRotation(Math.atan2(velocity.y, velocity.x) + Math.PI / 2);
+      }
+    }
+  
+    function vFormationShips() {
+      const activePirateShips = pirateShips.filter(
+        (pirateShip) => !pirateShip.userData.isDestroyed
+      );
+    
+      const numPirateShips = activePirateShips.length;
+      if (numPirateShips === 0) return; // No ships to update
+    
+      const maxSpeed = 2000;
+      const leadShip = activePirateShips[0];
+      const leadShipPos = leadShip.translation();
+    
+      // Calculate direction vector from lead ship to player ship
+      const dxToPlayer = playerPos.x - leadShipPos.x;
+      const dyToPlayer = playerPos.y - leadShipPos.y;
+      const distanceToPlayer = Math.hypot(dxToPlayer, dyToPlayer);
+      const directionToPlayer = {
+        x: dxToPlayer / distanceToPlayer,
+        y: dyToPlayer / distanceToPlayer,
+      };
+    
+      // Smooth the lead ship's turning by limiting the angular change
+      const previousLeadDirection = leadShip.userData.previousDirection || directionToPlayer;
+      const maxTurnRate = (Math.PI / 180) * 5; // Max 5 degrees per update
+      let angleBetween = Math.acos(
+        previousLeadDirection.x * directionToPlayer.x +
+          previousLeadDirection.y * directionToPlayer.y
+      );
+      if (angleBetween > maxTurnRate) {
+        // Adjust the directionToPlayer to limit the turn rate
+        const cross = previousLeadDirection.x * directionToPlayer.y - previousLeadDirection.y * directionToPlayer.x;
+        const turnDirection = cross > 0 ? 1 : -1;
+        const sinTurn = Math.sin(maxTurnRate * turnDirection);
+        const cosTurn = Math.cos(maxTurnRate);
+    
+        directionToPlayer.x =
+          previousLeadDirection.x * cosTurn - previousLeadDirection.y * sinTurn;
+        directionToPlayer.y =
+          previousLeadDirection.x * sinTurn + previousLeadDirection.y * cosTurn;
+      }
+    
+      // Normalize the adjusted direction
+      const norm = Math.hypot(directionToPlayer.x, directionToPlayer.y);
+      directionToPlayer.x /= norm;
+      directionToPlayer.y /= norm;
+    
+      // Store the adjusted direction for the next update
+      leadShip.userData.previousDirection = { ...directionToPlayer };
+    
+      // Set lead ship's velocity towards the player ship
+      const leadShipVelocity = {
+        x: directionToPlayer.x * maxSpeed,
+        y: directionToPlayer.y * maxSpeed,
+      };
+      leadShip.setLinvel(leadShipVelocity, true);
+    
+      // Rotate the lead ship to face the movement direction
+      leadShip.setRotation(Math.atan2(leadShipVelocity.y, leadShipVelocity.x) + Math.PI / 2);
+    
+      // Formation parameters
+      const formationSpacing = 200; // Increased spacing for better formation
+      const formationAngle = Math.PI / 6; // 30 degrees in radians for a wider V
+    
+      // For other ships
+      for (let i = 1; i < numPirateShips; i++) {
+        const pirateShip = activePirateShips[i];
+        const piratePos = pirateShip.translation();
+    
+        // Determine side and rank in formation
+        const side = i % 2 === 0 ? 1 : -1; // Alternate sides
+        const rank = Math.floor((i + 1) / 2); // Position in the formation
+    
+        // Calculate offset for the formation position
+        const offsetForward = formationSpacing * rank * Math.cos(formationAngle);
+        const offsetSideways = formationSpacing * rank * Math.sin(formationAngle) * side;
+    
+        // Calculate the target position in the formation relative to the lead ship
+        const targetPos = {
+          x:
+            leadShipPos.x -
+            directionToPlayer.x * offsetForward +
+            -directionToPlayer.y * offsetSideways,
+          y:
+            leadShipPos.y -
+            directionToPlayer.y * offsetForward +
+            directionToPlayer.x * offsetSideways,
+        };
+    
+        // Predictive targeting: account for the lead ship's future position
+        const leadShipFuturePos = {
+          x: leadShipPos.x + leadShipVelocity.x * 0.1, // Predict 0.1 seconds ahead
+          y: leadShipPos.y + leadShipVelocity.y * 0.1,
+        };
+        const targetFuturePos = {
+          x:
+            leadShipFuturePos.x -
+            directionToPlayer.x * offsetForward +
+            -directionToPlayer.y * offsetSideways,
+          y:
+            leadShipFuturePos.y -
+            directionToPlayer.y * offsetForward +
+            directionToPlayer.x * offsetSideways,
+        };
+    
+        // Set ship's velocity towards the predicted target position
+        const dx = targetFuturePos.x - piratePos.x;
+        const dy = targetFuturePos.y - piratePos.y;
+        const distance = Math.hypot(dx, dy);
+    
+        // Adjust speed to catch up or slow down to maintain formation
+        const desiredSpeed = Math.min(maxSpeed, distance * 5); // Adjust multiplier as needed
+    
+        const velocity = {
+          x: (dx / distance) * desiredSpeed,
+          y: (dy / distance) * desiredSpeed,
+        };
+        pirateShip.setLinvel(velocity, true);
+    
+        // Rotate the ship to face the movement direction
+        pirateShip.setRotation(Math.atan2(velocity.y, velocity.x) + Math.PI / 2);
+      }
+    }
+    
+  }
+  
+
+
+
+
+
+
+
+
+
 
   // Function to check the win condition
   function capCircleVelocity(circle, maxSpeed) {
@@ -1057,6 +1371,10 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     updateSquareSpeeds(squares, 1000)
     updateGlobalAngle();
   }, 1000)
+  setInterval(() => {
+    updatePirateShips(); // Update pirate ships
+
+  }, 50)
 
   const eventQueue = new RAPIER.EventQueue(true);
   function gameLoop() {
@@ -1178,6 +1496,7 @@ const leftAdminPanel = document.getElementById('left-admin-panel');
 
 let shipMovementStrategy = "sort"
 let cameraLocation = "user_controlled"
+let playerShipControl = "user_controlled"
 let circleRadius = 500
 const circleRadiusControl = document.getElementById('circle-radius-control');
 const radiusSlider = document.getElementById('radius-slider');
@@ -1208,6 +1527,16 @@ document.querySelectorAll('input[name="camera"]').forEach(radio => {
     }
   });
 });
+document.querySelectorAll('input[name="player-ship"]').forEach(radio => {
+  radio.addEventListener('change', function () {
+    if (this.checked) {
+      playerShipControl = this.value
+      console.log(`selected ship Control: ${this.value}`);
+
+    }
+  });
+});
+
 
 radiusSlider.addEventListener('input', function () {
   radiusValue.textContent = this.value;
