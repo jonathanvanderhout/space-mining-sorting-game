@@ -32,6 +32,26 @@ export function drawSquares(ctx, squares) {
         ctx.fill();
     });
 }
+export function drawPirateShips(ctx, pirateShips, pirateShipScale){
+    pirateShips.forEach(body => {
+        if (body.userData.isDestroyed) return;
+  
+        const position = body.translation();
+        ctx.save();
+        ctx.translate(position.x, position.y);
+        ctx.rotate(body.rotation());
+  
+        // Draw the triangle shape
+        ctx.beginPath();
+        ctx.moveTo(0 * pirateShipScale, -20 * pirateShipScale);  // Tip of the triangle
+        ctx.lineTo(-10 * pirateShipScale, 20 * pirateShipScale); // Left base
+        ctx.lineTo(10 * pirateShipScale, 20 * pirateShipScale);  // Right base
+        ctx.closePath();
+        ctx.fillStyle = body.userData.color;
+        ctx.fill();
+        ctx.restore();
+      });
+}
 
 export function drawRing(ctx, radius, x,y){
     ctx.beginPath();

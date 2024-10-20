@@ -256,25 +256,9 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
 
     // Inside the draw function, after drawing other ships
-    pirateShips.forEach(body => {
-      if (body.userData.isDestroyed) return;
-
-      const position = body.translation();
-      ctx.save();
-      ctx.translate(position.x, position.y);
-      ctx.rotate(body.rotation());
-
-      // Draw the triangle shape
-      ctx.beginPath();
-      ctx.moveTo(0 * pirateShipScale, -20 * pirateShipScale);  // Tip of the triangle
-      ctx.lineTo(-10 * pirateShipScale, 20 * pirateShipScale); // Left base
-      ctx.lineTo(10 * pirateShipScale, 20 * pirateShipScale);  // Right base
-      ctx.closePath();
-      ctx.fillStyle = body.userData.color;
-      ctx.fill();
-      ctx.restore();
-    });
-
+    drawing.drawPirateShips(ctx, pirateShips, pirateShipScale)
+    drawing.drawPirateShips(ctx, bribedPirateShips, pirateShipScale)
+    
 
     const position = playerShip.translation();
     ctx.save();
@@ -450,7 +434,93 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     shipTargets.push(null);
     return body;
   }
-
+  function assignTargetsToBribedPirateShips() {
+    if (squares.length === 0) {
+      // No squares to assign
+      for (let i = 0; i < bribedPirateShips.length; i++) {
+        bribedPirateShips[i].userData.targetedSquare = null;
+      }
+      return;
+    }
+  
+    const firstShip = bribedPirateShips[0];
+    const shipPos = firstShip.translation();
+  
+    // Find the closest squares to the first ship
+    const squaresWithDistances = [];
+    for (let i = 0; i < squares.length; i++) {
+      const square = squares[i];
+      const squarePos = square.translation();
+      const dx = squarePos.x - shipPos.x;
+      const dy = squarePos.y - shipPos.y;
+      const distance = Math.hypot(dx, dy);
+      squaresWithDistances.push({ square, distance });
+    }
+  
+    // Sort squares by distance
+    squaresWithDistances.sort((a, b) => a.distance - b.distance);
+  
+    // Assign squares to ships
+    const numShips = bribedPirateShips.length;
+    for (let i = 0; i < numShips; i++) {
+      const ship = bribedPirateShips[i];
+      if (i < squaresWithDistances.length) {
+        ship.userData.targetedSquare = squaresWithDistances[i].square;
+      } else {
+        // Not enough squares, assign null
+        ship.userData.targetedSquare = null;
+      }
+    }
+  }
+  
+  function updateBribedPirateShips() {
+    const speed = automatedShipSpeed;
+  
+    // Check if any ship needs a new target
+    let needToAssignTargets = false;
+    for (let i = 0; i < bribedPirateShips.length; i++) {
+      const ship = bribedPirateShips[i];
+      const targetSquare = ship.userData.targetedSquare;
+      if (!targetSquare || targetSquare.userData.removed) {
+        needToAssignTargets = true;
+        break;
+      }
+    }
+  
+    if (needToAssignTargets) {
+      // Assign new targets to all bribed pirate ships
+      assignTargetsToBribedPirateShips();
+    }
+  
+    // Move ships towards their targets
+    for (let i = 0; i < bribedPirateShips.length; i++) {
+      const ship = bribedPirateShips[i];
+      const targetSquare = ship.userData.targetedSquare;
+      if (targetSquare && !targetSquare.userData.removed) {
+        const shipPos = ship.translation();
+        const targetPos = targetSquare.translation();
+        const dx = targetPos.x - shipPos.x;
+        const dy = targetPos.y - shipPos.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance > 1) {
+          const velocity = {
+            x: (dx / distance) * speed,
+            y: (dy / distance) * speed,
+          };
+          ship.setLinvel(velocity, true);
+          ship.setRotation(Math.atan2(velocity.y, velocity.x) + Math.PI / 2);
+        } else {
+          // Reached the target, remove the square
+          removeSquareByBody(targetSquare);
+          ship.userData.targetedSquare = null; // Target is eliminated
+        }
+      } else {
+        // Ship has no valid target, will be assigned in the next update
+        ship.setLinvel({ x: 0, y: 0 }, true);
+      }
+    }
+  }
+  
   function createPirateShip(x, y, color) {
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(x, y)
@@ -480,6 +550,14 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
     pirateShips.push(body);
     return body;
+  }
+  function bribePirateShip() {
+    if ( pirateShips.length > 0) {
+      const ship = pirateShips.pop();
+      ship.userData.type = 'bribedPirateShip';
+      ship.userData.color = 'green';
+      bribedPirateShips.push(ship);
+    }
   }
 
 
@@ -822,6 +900,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         updateAutomatedShips(automatedShips, shipTargets, circles, targetPositions, automatedShipSpeed)
         break;
     }
+    updateBribedPirateShips()
     // removeMovingSquares(squares)
 
   }
@@ -1240,9 +1319,13 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   });
   document.getElementById('sell-resources').addEventListener('click', () => {
+    setInterval(()=>{
     totalMoney += removeSortedCircles(circles.length)
+
+    },1000)
   })
   document.getElementById('bribe-pirate-ship').addEventListener('click', () => {
+    bribePirateShip()
     // bribePirateShip()
   })
 
@@ -1625,6 +1708,30 @@ function playerShipDance() {
     originY = (height / 2) - playerPos.y * scale;
 
   }
+  function autoPanToBribedPirateShips() {
+    // Ensure there are bribed pirate ships
+    if (bribedPirateShips.length === 0) return;
+  
+    // Variables to store the sum of the positions
+    let totalX = 0;
+    let totalY = 0;
+  
+    // Sum up the positions of all bribed pirate ships
+    bribedPirateShips.forEach(ship => {
+      const shipPos = ship.translation();
+      totalX += shipPos.x;
+      totalY += shipPos.y;
+    });
+  
+    // Calculate the average position (center of mass)
+    const centerX = totalX / bribedPirateShips.length;
+    const centerY = totalY / bribedPirateShips.length;
+  
+    // Focus the camera on the center of mass
+    originX = (width / 2) - centerX * scale;
+    originY = (height / 2) - centerY * scale;
+  }
+  
   setInterval(() => {
     updateSquareSpeeds(squares, 1000)
     updateGlobalAngle();
@@ -1664,6 +1771,9 @@ function playerShipDance() {
           break;
         case "player_ship":
           autoPanToShip()
+          break;
+        case "bribed_ships":
+          autoPanToBribedPirateShips()
           break;
         default:
           break;
@@ -1708,6 +1818,7 @@ function playerShipDance() {
     // Remove the collider and body from the physics world
     world.removeCollider(square.userData.collider);
     world.removeRigidBody(square);
+    square.userData.removed = true;
 
     // Create ghost square effect
     const ghostSquare = {
