@@ -147,12 +147,11 @@ function updateShipBehavior(ship, circle, targetPositions, automatedShipSpeed) {
     const circlePos = circle.translation();
     const target = targetPositions[circle.userData.material];
     const distanceToTargetSquared = getSquaredDistance(circlePos, target);
-
     if (distanceToTargetSquared >= 2500) { // 50^2
         const shipPos = ship.translation();
         const distanceToCircleSquared = getSquaredDistance(circlePos, shipPos);
-
-        if (distanceToCircleSquared < 900) { // 30^2
+        const shipPointToCirclePoint = (20 + circle.userData.radius)**2
+        if (distanceToCircleSquared < shipPointToCirclePoint) { 
             pushCircleTowards(circle, target.x, target.y, automatedShipSpeed);
         } else {
             moveShipTowards(ship, circlePos.x, circlePos.y, automatedShipSpeed);

@@ -244,6 +244,15 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       ctx.fill();
       ctx.restore();
     });
+      // Draw moving objects
+    movingObjects.forEach(obj => {
+      const position = obj.translation();
+      ctx.beginPath();
+      ctx.arc(position.x, position.y, obj.userData.radius, 0, 2 * Math.PI);
+      ctx.fillStyle = obj.userData.color;
+      ctx.fill();
+    });
+
 
 
     // Inside the draw function, after drawing other ships
@@ -337,6 +346,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   const automatedShips = [];
   const circles = [];
   const squares = [];
+  const movingObjects = [];
 
   const safeRadius = 3000
   const pirateShips = []; // Array to hold pirate ships
@@ -541,7 +551,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         .setTranslation(circleX, circleY)
         .setLinearDamping(1); // Increase this value to make circles slow down faster
       const body = world.createRigidBody(bodyDesc);
-      const colliderDesc = RAPIER.ColliderDesc.ball(circleRadius);
+      const colliderDesc = RAPIER.ColliderDesc.ball(radius);
       colliderDesc.setRestitution(0.7);
       const collider = world.createCollider(colliderDesc, body);
 
@@ -596,13 +606,48 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     }
   }
 
+  function updateMovingObjects() {
+    for (let i = movingObjects.length - 1; i >= 0; i--) {
+      const obj = movingObjects[i];
+  
+      const objPos = obj.translation();
+      const dx = obj.userData.targetX - objPos.x;
+      const dy = obj.userData.targetY - objPos.y;
+      const distance = Math.hypot(dx, dy);
+  
+      // Move towards the target position
+      if (distance > 30) { // Avoid division by zero
+        let speed = 5000; // Adjust the speed as needed
+        if(distance < 500){
+          speed =500
+        }
+        const velocity = {
+          x: (dx / distance) * speed,
+          y: (dy / distance) * speed,
+        };
+        obj.setLinvel(velocity, true);
+      } else {
+        // Reached the target, remove the object
+        // Remove the collider and body from the physics world
+        world.removeCollider(obj.userData.collider);
+        world.removeRigidBody(obj);
+  
+        // Remove the object from the movingObjects array
+        movingObjects.splice(i, 1);
+        generateCircles(1,objPos, 20)
+      }
+    }
+  }
+  
+  
+
 
   function generateSquares(count, x, y, sortingAreaRadius, worldRadius) {
     for (let i = 0; i < count; i++) {
       // Random placement around the provided (x, y) coordinates
       // let offsetDistance = Math.random() * 30000;  // Random distance
 
-      let offsetDistance = 1500 + Math.random() * 30000;  // Random distance
+      let offsetDistance = 2500 + Math.random() * 30000;  // Random distance
       let angle = Math.random() * Math.PI * 2;   // Random angle
       let offsetX = Math.cos(angle) * offsetDistance;
       let offsetY = Math.sin(angle) * offsetDistance;
@@ -640,6 +685,39 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       // Optionally, you could add some visual effects for square generation if needed
     }
   }
+  function spawnMovingObject(startX, startY) {
+    // Generate a random point inside the safe radius
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * safeRadius;
+  
+    const targetX = (gameWorldWidth / 2) + radius * Math.cos(angle);
+    const targetY = (gameWorldHeight / 2) + radius * Math.sin(angle);
+  
+    // Create the object at the starting position
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(startX, startY)
+      .setLinearDamping(1);
+    const body = world.createRigidBody(bodyDesc);
+  
+    const size = 10; // Initial size of the object
+    const colliderDesc = RAPIER.ColliderDesc.ball(size);
+    colliderDesc.setRestitution(0.5);
+  
+    const collider = world.createCollider(colliderDesc, body);
+  
+    body.userData = {
+      targetX: targetX,
+      targetY: targetY,
+      isTransformed: false, // Flag to check if it has transformed
+      collider: collider,
+      type: 'movingObject',
+      radius: size,
+      color: '#FFFFFF', // White color
+    };
+  
+    movingObjects.push(body);
+  }
+  
 
 
   function createGhostRing(x, y) {
@@ -653,7 +731,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
 
   generateCircles(startingCirclesCount);
-  generateCircles(1, null, 20);
+  // generateCircles(1, null, 20);
   generateSquares(500, gameWorldWidth / 2, gameWorldHeight / 2);
   // Spawn a pirate ship at the top of the game world
   createPirateShip(gameWorldWidth / 2, -3001, '#FF0000'); // Red color
@@ -1157,6 +1235,11 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     }
 
   });
+  document.getElementById('sell-resources').addEventListener('click', () => {
+    
+  })
+
+  
 
   function removeSortedCircles(numToRemove) {
     let removedCount = 0;
@@ -1551,6 +1634,7 @@ function playerShipDance() {
 
       controlPlayerShip();
       updateAutomation();
+      updateMovingObjects()
 
       checkWinCondition();
       world.step(eventQueue);
@@ -1603,6 +1687,8 @@ function playerShipDance() {
     const index = squares.findIndex(sq => sq.handle === squareBody.handle);
     if (index !== -1) {
       removeSquare(squares[index], index);
+      generateSquares(1, gameWorldWidth / 2, gameWorldHeight / 2);
+
     }
   }
   function removeSquare(square, index) {
@@ -1621,6 +1707,7 @@ function playerShipDance() {
       opacity: 1,
     };
     ghostSquares.push(ghostSquare);
+    spawnMovingObject(pos.x, pos.y)
 
     // Remove the square from the array
     squares.splice(index, 1);
