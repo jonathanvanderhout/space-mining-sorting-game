@@ -350,14 +350,16 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   const safeRadius = 3000
   const pirateShips = []; // Array to hold pirate ships
+  const bribedPirateShips = []
   const pirateShipScale = 5;
   const pirateShipVertices = [
     { x: 0 * pirateShipScale, y: -20 * pirateShipScale },  // Tip of the triangle (forward direction)
     { x: -10 * pirateShipScale, y: 20 * pirateShipScale }, // Left base
     { x: 10 * pirateShipScale, y: 20 * pirateShipScale }   // Right base
   ];
-  let money = 0;
-  let totalMoneySpent = 0;
+  let totalMoney = 0
+  let sortedResources = 0;
+  let totalsortedResourcesSpent = 0;
   let shipsPurchased = 1; // Start with one ship
   const maxShips = 200;
   let speedIncreases = 0;
@@ -517,7 +519,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   playerShip.userData.targetedSquare = null;
   playerShip.userData.danceAngle = 0;
   // Function to generate circles (materials)
-  function generateCircles(count, location = null, circleRadius = null) {
+  function generateCircles(count, location = null, circleRadius = null, moneyValue = 1) {
     if(circleRadius ===null){
       var radius = 10
     }
@@ -562,7 +564,8 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         collider: collider,
         radius: radius,
         removed: false,
-        isInCorrectArea: false
+        isInCorrectArea: false,
+        moneyValue: moneyValue
 
       };
       circles.push(body);
@@ -634,7 +637,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   
         // Remove the object from the movingObjects array
         movingObjects.splice(i, 1);
-        generateCircles(1,objPos, 20)
+        generateCircles(1,objPos, 20, 10)
       }
     }
   }
@@ -1072,19 +1075,19 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   }
   function checkWinCondition() {
     let allCirclesCorrect = true;
-    money = 0;
+    sortedResources = 0;
 
     for (let i = 0; i < circles.length; i++) {
       const circle = circles[i];
       if (circle.userData.isInCorrectArea) {
         capCircleVelocity(circle, 100)
-        money++;
+        sortedResources++;
       } else {
         allCirclesCorrect = false;
       }
     }
 
-    updateMoney();
+    updatesortedResources();
 
     // if (allCirclesCorrect && !gameWon && circles.length >= 300) {
     //     let message = document.getElementById('message')
@@ -1105,8 +1108,8 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     // }
   }
 
-  // Update money and buttons
-  function updateMoney() {
+  // Update sortedResources and buttons
+  function updatesortedResources() {
     let elapsedTime = '';
     if (startTime) {
       elapsedTime = formatElapsedTime(startTime);
@@ -1114,9 +1117,10 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
       elapsedTime = '00:00';
     }
 
-    document.getElementById('money-stats').innerHTML = `Sorted Resources: ${money}
-<br>Total Resources Spent: ${totalMoneySpent}
-<br>Total Unsorted: ${circles.length - money}
+    document.getElementById('money-stats').innerHTML = `Money: ${totalMoney}
+    <br>Sorted Resources: ${sortedResources}
+<br>Total Resources Spent: ${totalsortedResourcesSpent}
+<br>Total Unsorted: ${circles.length - sortedResources}
 <br>Time Elapsed: ${elapsedTime}`;
     updateButtons();
   }
@@ -1127,10 +1131,10 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     const buyGravityCollectorButton = document.getElementById('buy-gravity-collector');
     const randomDeliveryButton = document.getElementById('random-delivery');
 
-    increaseSpeedButton.disabled = money < 5 || speedIncreases >= maxSpeedIncreases;
-    buyShipButton.disabled = money < 15 || shipsPurchased >= maxShips;
-    buyGravityCollectorButton.disabled = money < 50;
-    randomDeliveryButton.disabled = money < 5 || circles.length >= 300;
+    increaseSpeedButton.disabled = sortedResources < 5 || speedIncreases >= maxSpeedIncreases;
+    buyShipButton.disabled = sortedResources < 15 || shipsPurchased >= maxShips;
+    buyGravityCollectorButton.disabled = sortedResources < 50;
+    randomDeliveryButton.disabled = sortedResources < 5 || circles.length >= 300;
 
     // Update button text with counts
     increaseSpeedButton.innerHTML = `Speed Increase (cost: 5) ${speedIncreases}/${maxSpeedIncreases}`;
@@ -1165,22 +1169,22 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
   // Event listeners for buttons
   document.getElementById('buy-gravity-collector').addEventListener('click', () => {
     const cost = 50;
-    if (money >= cost) {
-      money -= cost;
-      totalMoneySpent += cost;
-      updateMoney();
+    if (sortedResources >= cost) {
+      sortedResources -= cost;
+      totalsortedResourcesSpent += cost;
+      updatesortedResources();
       activateGravityCollector();
     }
   });
 
   document.getElementById('increase-speed').addEventListener('click', () => {
-    if (money >= 5 && speedIncreases < maxSpeedIncreases) {
-      money -= 5;
-      totalMoneySpent += 5;
+    if (sortedResources >= 5 && speedIncreases < maxSpeedIncreases) {
+      sortedResources -= 5;
+      totalsortedResourcesSpent += 5;
       automatedShipSpeed += 25;
       speedIncreases += 1;
       removeSortedCircles(5);
-      updateMoney();
+      updatesortedResources();
 
       if (speedIncreases >= maxSpeedIncreases) {
         document.getElementById('increase-speed').disabled = true;
@@ -1190,13 +1194,13 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   document.getElementById('buy-ship').addEventListener('click', () => {
     const cost = 15;
-    if (money >= cost && shipsPurchased < maxShips) {
-      money -= cost;
-      totalMoneySpent += cost;
+    if (sortedResources >= cost && shipsPurchased < maxShips) {
+      sortedResources -= cost;
+      totalsortedResourcesSpent += cost;
       removeSortedCircles(15);
       const newShip = createShip(gameWorldWidth / 2, gameWorldHeight / 2, getRandomColor());
       shipsPurchased += 1;
-      updateMoney();
+      updatesortedResources();
 
       if (shipsPurchased >= maxShips) {
         document.getElementById('buy-ship').disabled = true;
@@ -1204,12 +1208,12 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
     }
   });
   function delivery(location = null) {
-    if (money >= 5 && circles.length < 700) {
+    if (sortedResources >= 5 && circles.length < 700) {
       removeSortedCircles(5);
-      money -= 5;
-      totalMoneySpent += 5;
+      sortedResources -= 5;
+      totalsortedResourcesSpent += 5;
       generateCircles(20, location);
-      updateMoney();
+      updatesortedResources();
     }
   }
   function freeDelivery(location = null) {
@@ -1236,14 +1240,20 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
 
   });
   document.getElementById('sell-resources').addEventListener('click', () => {
-    
+    totalMoney += removeSortedCircles(circles.length)
+  })
+  document.getElementById('bribe-pirate-ship').addEventListener('click', () => {
+    // bribePirateShip()
   })
 
   
 
+
+
   function removeSortedCircles(numToRemove) {
     let removedCount = 0;
-    totalMoneySpent += numToRemove;
+    let removedValue = 0
+    totalsortedResourcesSpent += numToRemove;
 
     for (let i = circles.length - 1; i >= 0 && removedCount < numToRemove; i--) {
       const circle = circles[i];
@@ -1251,7 +1261,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         const circlePosition = { x: circle.translation().x, y: circle.translation().y };
         const circleColor = circle.userData.color;
         const radius = circle.userData.radius;
-
+        removedValue += circle.userData.moneyValue
         circle.userData.isTargeted = false;
 
         for (let j = 0; j < shipTargets.length; j++) {
@@ -1277,6 +1287,7 @@ import { isCircleInCorrectArea, updateAutomatedShips, moveShipsTowards, moveShip
         ghostCircles.push(ghostCircle);
       }
     }
+    return removedValue
   }
 
   function addRedRings() {
